@@ -1,206 +1,35 @@
 <?php namespace Arcanedev\QrCode;
 
+use Arcanedev\QrCode\Contracts\QrCodeInterface;
+use Arcanedev\QrCode\Contracts\BuilderInterface;
 use Arcanedev\QrCode\Exceptions\ImageFunctionUnknownException;
 
-// TODO: Refactor it
-class QrCode implements Contracts\QrCodeInterface
+// TODO: Clean & Refactor it
+class QrCode implements QrCodeInterface
 {
     /* ------------------------------------------------------------------------------------------------
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
     /** @var Builder */
-    protected $builder;
+    private $builder;
 
     /* ------------------------------------------------------------------------------------------------
      |  Constructor
      | ------------------------------------------------------------------------------------------------
      */
-    public function __construct()
+    public function __construct(BuilderInterface $builder = null)
     {
-        $this->builder  = new Builder;
+        if ( is_null($builder) )
+            $builder  = new Builder;
 
-        $this->initPaths();
-    }
-
-    protected function initPaths()
-    {
-        $this->setPath(qr_code_assets_path('data'));
-        $this->setImagePath(qr_code_assets_path('image'));
+        $this->builder  = $builder;
     }
 
     /* ------------------------------------------------------------------------------------------------
      |  Getters & Setters
      | ------------------------------------------------------------------------------------------------
      */
-    /**
-     * Return path to the data directory
-     *
-     * @return string
-     */
-    public function getPath()
-    {
-        return $this->builder->getPath();
-    }
-
-    /**
-     * Set path to the data directory
-     *
-     * @param  string $path Data directory
-     * @return QrCode
-     */
-    public function setPath($path)
-    {
-        $this->builder->setPath($path);
-
-        return $this;
-    }
-
-    /**
-     * Return path to the images directory
-     *
-     * @return string
-     */
-    public function getImagePath()
-    {
-        return $this->builder->getImagePath();
-    }
-
-    /**
-     * Set path to the images directory
-     *
-     * @param  string $image_path Image directory
-     * @return QrCode
-     */
-    public function setImagePath($image_path)
-    {
-        $this->builder->setImagePath($image_path);
-
-        return $this;
-    }
-
-    /**
-     * Set structure append
-     *
-     * @param  int    $n
-     * @param  int    $m
-     * @param  int    $parity        Parity
-     * @param  string $original_data Original data
-     *
-     * @return QrCode
-     */
-    public function setStructureAppend($n, $m, $parity, $original_data)
-    {
-        $this->builder->setStructureAppend($n, $m, $parity, $original_data);
-
-        return $this;
-    }
-
-    /**
-     * Return QR Code version
-     *
-     * @return int
-     */
-    public function getVersion()
-    {
-        return $this->builder->getVersion();
-    }
-
-    /**
-     * Set QR Code version
-     *
-     * @param  int    $version QR Code version
-     * @return QrCode
-     */
-    public function setVersion($version)
-    {
-        $this->builder->setVersion($version);
-
-        return $this;
-    }
-
-    /**
-     * Set QR Code error correction level
-     *
-     * @param  int    $error_correction Error Correction Level
-     * @return QrCode
-     */
-    public function setErrorCorrection($error_correction)
-    {
-        $this->builder->setErrorCorrection($error_correction);
-
-        return $this;
-    }
-
-    /**
-     * Return QR Code error correction level
-     *
-     * @return int
-     */
-    public function getErrorCorrection()
-    {
-        return $this->builder->getErrorCorrection();
-    }
-
-    /**
-     * Return QR Code module size
-     *
-     * @return int
-     */
-    public function getModuleSize()
-    {
-        return $this->builder->getModuleSize();
-    }
-
-    /**
-     * Set QR Code module size
-     *
-     * @param  int    $module_size Module size
-     * @return QrCode
-     */
-    public function setModuleSize($module_size)
-    {
-        $this->builder->setModuleSize($module_size);
-
-        return $this;
-    }
-
-    /**
-     * Set image type for rendering
-     *
-     * @param  string $image_type Image type
-     * @return QrCode
-     */
-    public function setImageType($image_type)
-    {
-        $this->builder->setImageType($image_type);
-
-        return $this;
-    }
-
-    /**
-     * Return image type for rendering
-     *
-     * @return string
-     */
-    public function getImageType()
-    {
-        return $this->builder->getImageType();
-    }
-
-    /**
-     * Set image type for rendering via extension
-     *
-     * @param  string $extension Image extension
-     * @return QrCode
-     */
-    public function setExtension($extension)
-    {
-        $this->builder->setExtension($extension);
-
-        return $this;
-    }
-
     /**
      * Return text that will be hid in QR Code
      *
@@ -225,16 +54,35 @@ class QrCode implements Contracts\QrCodeInterface
     }
 
     /**
-     * Set QR Code size (width)
+     * Return image type for rendering
      *
-     * @param  int    $size Width of the QR Code
+     * @return string
+     */
+    public function getFormat()
+    {
+        return $this->builder->getImageFormat();
+    }
+
+    /**
+     * Set image type for rendering
+     *
+     * @param string $format
+     *
      * @return QrCode
      */
-    public function setSize($size)
+    public function setFormat($format)
     {
-        $this->builder->setSize($size);
+        $this->builder->setImageFormat($format);
+    }
 
-        return $this;
+    /**
+     * Get available all available image types
+     *
+     * @return array
+     */
+    public function getAvailableFormats()
+    {
+        return $this->builder->getAvailableImageTypes();
     }
 
     /**
@@ -245,6 +93,19 @@ class QrCode implements Contracts\QrCodeInterface
     public function getSize()
     {
         return $this->builder->getSize();
+    }
+
+    /**
+     * Set QR Code size (width)
+     *
+     * @param  int    $size Width of the QR Code
+     * @return QrCode
+     */
+    public function setSize($size)
+    {
+        $this->builder->setSize($size);
+
+        return $this;
     }
 
     /**
@@ -343,29 +204,117 @@ class QrCode implements Contracts\QrCodeInterface
         return $this;
     }
 
-    protected function getAvailableImageTypes()
+    /**
+     * Return QR Code version
+     *
+     * @return int
+     */
+    public function getVersion()
     {
-        return $this->builder->getAvailableImageTypes();
+        return $this->builder->getVersion();
     }
 
     /**
-     * Return the image resource
+     * Set QR Code version
      *
-     * @return resource
+     * @param  int    $version QR Code version
+     * @return QrCode
      */
-    public function getImage()
+    public function setVersion($version)
     {
-        if ( ! $this->hasImage() ) {
-            $this->create();
-        }
+        $this->builder->setVersion($version);
 
-        return $this->builder->getImage();
+        return $this;
+    }
+
+    /**
+     * Set structure append
+     *
+     * @param  int    $n
+     * @param  int    $m
+     * @param  int    $parity        Parity
+     * @param  string $original_data Original data
+     *
+     * @return QrCode
+     */
+    protected function setStructureAppend($n, $m, $parity, $original_data)
+    {
+        $this->builder->setStructureAppend($n, $m, $parity, $original_data);
+
+        return $this;
+    }
+
+    /**
+     * Set QR Code error correction level
+     *
+     * @param  int    $error_correction Error Correction Level
+     * @return QrCode
+     */
+    protected function setErrorCorrection($error_correction)
+    {
+        $this->builder->setErrorCorrection($error_correction);
+
+        return $this;
+    }
+
+    /**
+     * Return QR Code error correction level
+     *
+     * @return int
+     */
+    protected function getErrorCorrection()
+    {
+        return $this->builder->getErrorCorrection();
+    }
+
+    /**
+     * Return QR Code module size
+     *
+     * @return int
+     */
+    protected function getModuleSize()
+    {
+        return $this->builder->getModuleSize();
+    }
+
+    /**
+     * Set QR Code module size
+     *
+     * @param  int $moduleSize - Module size
+     *
+     * @return QrCode
+     */
+    protected function setModuleSize($moduleSize)
+    {
+        $this->builder->setModuleSize($moduleSize);
+
+        return $this;
     }
 
     /* ------------------------------------------------------------------------------------------------
-     |  Functions
+     |  Main Functions
      | ------------------------------------------------------------------------------------------------
      */
+    /**
+     * Create QR Code and return its content
+     *
+     * @param  string|null $format - Image type (gif, png, wbmp, jpeg)
+     *
+     * @throws ImageFunctionUnknownException
+     *
+     * @return string
+     */
+    public function get($format = null)
+    {
+        if ( ! is_null($format) )
+            $this->setFormat($format);
+
+        ob_start();
+        call_user_func($this->getFunctionName(), $this->getImage());
+
+        return ob_get_clean();
+    }
+
     /**
      * Return the data URI
      *
@@ -373,42 +322,7 @@ class QrCode implements Contracts\QrCodeInterface
      */
     public function getDataUri()
     {
-        ob_start();
-        call_user_func('image' . $this->getImageType(), $this->getImage());
-        $contents = ob_get_clean();
-
-        return 'data:image/' . $this->getImageType() . ';base64,' . base64_encode($contents);
-    }
-
-    /**
-     * Render the QR Code then save it to given file name
-     *
-     * @param string $filename  - File name of the QR Code
-     * @param string $extension    - Format of the file (png, jpeg, jpg, gif, wbmp)
-     *
-     * @throws ImageFunctionUnknownException
-     *
-     * @return QrCode
-     */
-    public function save($filename, $extension)
-    {
-        $extension = str_replace('jpg', 'jpeg', $extension);
-
-        if ( ! in_array($extension, $this->getAvailableImageTypes()) ) {
-            $extension = $this->getImageType();
-        }
-
-        if ( ! function_exists('image' . $extension) ) {
-            throw new ImageFunctionUnknownException('QRCode: function image' . $extension . ' does not exists.');
-        }
-
-        // TODO: Add a function to create an new directory
-        call_user_func_array('image' . $extension, [
-            $this->getImage(),
-            $filename . '.' . $extension
-        ]);
-
-        return $this;
+        return 'data:image/' . $this->getFormat() . ';base64,' . base64_encode($this->get());
     }
 
     /**
@@ -421,80 +335,68 @@ class QrCode implements Contracts\QrCodeInterface
      *
      * @return QrCode
      */
-    public function render($format = 'png')
+    public function render($format = null)
     {
-        $format = str_replace('jpg', 'jpeg', $format);
+        if ( ! is_null($format) )
+            $this->setFormat($format);
 
-        if ( ! in_array($format, $this->getAvailableImageTypes()) ) {
-            $format = $this->getImageType();
-        }
-
-        if ( ! function_exists('image' . $format) ) {
-            throw new ImageFunctionUnknownException('QRCode: function image' . $format . ' does not exists.');
-        }
-
-        call_user_func('image' . $format, $this->getImage());
+        call_user_func($this->getFunctionName(), $this->getImage());
 
         return $this;
     }
 
     /**
-     * Create QR Code and return its content
+     * Render the QR Code then save it to given file name
      *
-     * @param  string|null                   $format Image type (gif, png, wbmp, jpeg)
+     * @param string $filename
      *
      * @throws ImageFunctionUnknownException
      *
      * @return string
      */
-    public function get($format = null)
+    public function save($filename)
     {
-        $this->create();
+        $this->setFilename($filename);
 
-        if ($format == 'jpg') {
-            $format = 'jpeg';
-        }
+        call_user_func_array($this->getFunctionName(), [$this->getImage(), $filename]);
 
-        if ( ! $this->isInAvailableImageTypes($format) ) {
-            $format = $this->getImageType();
-        }
-
-        if ( ! function_exists("image{$format}") ) {
-            throw new ImageFunctionUnknownException("QRCode: function image{$format} does not exists.");
-        }
-
-        ob_start();
-        call_user_func('image' . $format, $this->getImage());
-
-        return ob_get_clean();
+        return $filename;
     }
 
-    public function create()
+    /**
+     * Generate img Tag with the qr-code
+     *
+     * @param string|null   $alt
+     * @param array|null    $attributes
+     *
+     * @return string
+     */
+    public function image($alt = "", $attributes = [])
     {
-        $this->image = $this->builder->create();
+        return img_tag($this->getDataUri(), $alt, $attributes);
     }
 
     /* ------------------------------------------------------------------------------------------------
-     |  Check Functions
+     |  Other Functions
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Check if image is not empty
+     * Return the image resource
      *
-     * @return bool
+     * @return resource
      */
-    public function hasImage()
+    private function getImage()
     {
-        return $this->builder->hasImage();
+        return $this->builder->getImage();
     }
 
-    /**
-     * @param $image_type
-     *
-     * @return bool
-     */
-    protected function isInAvailableImageTypes($image_type)
+    private function getFunctionName()
     {
-        return $this->builder->isInAvailableImageTypes($image_type);
+        return $this->builder->getFunctionName();
+    }
+
+    private function setFilename($filename)
+    {
+        $this->builder->setFilename($filename);
     }
 }

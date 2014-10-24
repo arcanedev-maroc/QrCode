@@ -1,6 +1,8 @@
 <?php namespace Arcanedev\QrCode\Entities;
 
-class Color
+use SebastianBergmann\Exporter\Exception;
+
+class Color implements Contracts\ColorInterface
 {
     /* ------------------------------------------------------------------------------------------------
      |  Properties
@@ -11,6 +13,8 @@ class Color
     protected $green;
 
     protected $blue;
+
+    private static $required   = ['r', 'g', 'b'];
 
     /* ------------------------------------------------------------------------------------------------
      |  Constructor
@@ -26,7 +30,7 @@ class Color
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * @return mixed
+     * @return int
      */
     public function getRed()
     {
@@ -36,13 +40,13 @@ class Color
     /**
      * @param int $red
      */
-    protected function setRed($red)
+    private function setRed($red)
     {
         $this->red = $red;
     }
 
     /**
-     * @return mixed
+     * @return int
      */
     public function getGreen()
     {
@@ -52,7 +56,7 @@ class Color
     /**
      * @param int $green
      */
-    protected function setGreen($green)
+    private function setGreen($green)
     {
         $this->green = $green;
     }
@@ -68,7 +72,7 @@ class Color
     /**
      * @param int $blue
      */
-    protected function setBlue($blue)
+    private function setBlue($blue)
     {
         $this->blue = $blue;
     }
@@ -78,7 +82,7 @@ class Color
      *
      * @return array
      */
-    protected function getValues()
+    private function getValues()
     {
         return [
             'r' => $this->red,
@@ -92,12 +96,12 @@ class Color
      * @param int $green
      * @param int $blue
      *
-     * @throws Exceptions\IncorrectRGBValues
+     * @throws Exceptions\InvalidRGBValuesException
      */
-    protected function setValues($red, $green, $blue)
+    private function setValues($red, $green, $blue)
     {
         if ( ! $this->checkRgbValues($red, $green, $blue) ) {
-            throw new Exceptions\IncorrectRGBValues("Incorrect RGB Values [red = {$red}, green = {$green}, blue = {$blue}]");
+            throw new Exceptions\InvalidRGBValuesException("Incorrect RGB Values (red = {$red}, green = {$green}, blue = {$blue}).");
         }
 
         $this->setRed($red);
@@ -106,21 +110,51 @@ class Color
     }
 
     /**
-     * @param array $color
+     * @param array $rgbArray
+     *
+     * @throws Exceptions\InvalidRGBArrayException
+     * @throws Exceptions\InvalidRGBValuesException
      *
      * @return Color
      */
-    public function setFromArray($color)
+    public function setFromArray(array $rgbArray)
     {
-        $this->setValues($color['r'], $color['g'], $color['b']);
+        if ( ! $this->checkRgbArray($rgbArray) )
+            throw new Exceptions\InvalidRGBArrayException("The RGB Array must have the required keys : 'r', 'g', 'b'.");
+
+        $this->setValues($rgbArray['r'], $rgbArray['g'], $rgbArray['b']);
 
         return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getHex()
+    {
+        return $this->rgbToHex();
     }
 
     /* ------------------------------------------------------------------------------------------------
      |  Function
      | ------------------------------------------------------------------------------------------------
      */
+
+    /**
+     * @param int $red
+     * @param int $green
+     * @param int $blue
+     *
+     * @return Color
+     *
+     * @throws Exceptions\InvalidRGBValuesException
+     */
+    public function rgb($red, $green, $blue)
+    {
+        $this->setValues($red, $green, $blue);
+
+        return $this;
+    }
 
     /**
      * @param string $hex
@@ -131,7 +165,9 @@ class Color
      */
     public function hex($hex)
     {
-        $this->hexToRGB($hex);
+        list($red, $green, $blue) = $this->hexToRGB($hex);
+
+        $this->rgb($red, $green, $blue);
 
         return $this;
     }
@@ -139,58 +175,46 @@ class Color
     /**
      * @return Color
      *
-     * @throws Exceptions\IncorrectRGBValues
+     * @throws Exceptions\InvalidRGBValuesException
      */
     public function black()
     {
-        return $this->rgb(0, 0, 0);
-    }
-
-    /**
-     * @return Color
-     *
-     * @throws Exceptions\IncorrectRGBValues
-     */
-    public function white()
-    {
-        return $this->rgb(255, 255, 255);
-    }
-
-    /**
-     * @param int $red
-     * @param int $green
-     * @param int $blue
-     *
-     * @return Color
-     *
-     * @throws Exceptions\IncorrectRGBValues
-     */
-    public function rgb($red, $green, $blue)
-    {
-        $this->setValues($red, $green, $blue);
+        $this->rgb(0, 0, 0);
 
         return $this;
     }
 
+    /**
+     * @return Color
+     *
+     * @throws Exceptions\InvalidRGBValuesException
+     */
+    public function white()
+    {
+        $this->rgb(255, 255, 255);
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
     public function toArray()
     {
-        return [
-            'r' => $this->red,
-            'g' => $this->green,
-            'b' => $this->blue
-        ];
+        return $this->getValues();
     }
 
     /* ------------------------------------------------------------------------------------------------
-     |  Other Functions
+     |  Conversion Functions
      | ------------------------------------------------------------------------------------------------
      */
     /**
+     *
      * @param string $hex
      *
      * @return Color
      *
-     * @throws Exceptions\IncorrectRGBValues
+     * @throws Exceptions\InvalidRGBValuesException
      * @throws Exceptions\InvalidHexValueException
      */
     private function hexToRGB($hex)
@@ -198,23 +222,17 @@ class Color
         if ( ! $this->isHexValid($hex) )
             throw new Exceptions\InvalidHexValueException;
 
-        $hex = str_replace("#", "", $hex);
+        return hex_to_rgb($hex);
+    }
 
-        if ( strlen($hex) == 3 )
-        {
-            $red    = hexdec(substr($hex, 0, 1) . substr($hex, 0, 1));
-            $green  = hexdec(substr($hex, 1, 1) . substr($hex, 1, 1));
-            $blue   = hexdec(substr($hex, 2, 1) . substr($hex, 2, 1));
-        }
-        else {
-            $red    = hexdec(substr($hex, 0, 2));
-            $green  = hexdec(substr($hex, 2, 2));
-            $blue   = hexdec(substr($hex, 4, 2));
-        }
-
-        $this->setValues($red, $green, $blue);
-
-        return $this;
+    /**
+     * Convert RGB To HEX
+     *
+     * @return string
+     */
+    private function rgbToHex()
+    {
+        return rgb_to_hex($this->red, $this->green, $this->blue);
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -222,20 +240,15 @@ class Color
      | ------------------------------------------------------------------------------------------------
      */
     /**
+     * Check if HEX is valid
+     *
      * @param string $hex
      *
      * @return bool
      */
-    public function isHexValid($hex)
+    private function isHexValid($hex)
     {
-        $hex = str_replace("#", "", $hex);
-
-        if ( strlen($hex) == 3 || strlen($hex) == 6)
-        {
-            return true;
-        }
-
-        return false;
+        return validate_hex_color($hex);
     }
 
     /**
@@ -245,21 +258,38 @@ class Color
      *
      * @return bool
      */
-    public function checkRgbValues($red, $green, $blue)
+    private function checkRgbValues($red, $green, $blue)
     {
-        if ( $this->checkValue($red) && $this->checkValue($green) && $this->checkValue($blue) )
-            return true;
-
-        return false;
+        return $this->checkValue($red) && $this->checkValue($green) && $this->checkValue($blue);
     }
 
     /**
-     * @param int $value - HEX Value
+     * Check Color Value Value
+     *
+     * @param int $value
      *
      * @return bool
      */
     private function checkValue($value)
     {
-        return (bool) ($value >= 0 && $value <= 255);
+        return ( is_int($value) && ($value >= 0 && $value <= 255) );
+    }
+
+    /**
+     * @param array $rgbArray
+     *
+     * @return bool
+     */
+    private function checkRgbArray($rgbArray)
+    {
+        if ( is_array($rgbArray) ) {
+            $intersectCount = count(array_intersect_key(array_flip(self::$required), $rgbArray));
+
+            if ( $intersectCount === count(self::$required) ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

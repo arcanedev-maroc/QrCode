@@ -1,14 +1,14 @@
 <?php namespace Arcanedev\QrCode;
 
 use Arcanedev\QrCode\Entities\Color;
+use Arcanedev\QrCode\Entities\ImageType;
 
-use Arcanedev\QrCode\Exceptions\DataDoesntExistsException;
+use Arcanedev\QrCode\Exceptions\DataDoesNotExistsException;
 use Arcanedev\QrCode\Exceptions\ImageSizeTooLargeException;
 use Arcanedev\QrCode\Exceptions\VersionTooLargeException;
-
 use OverflowException;
 
-class Builder
+class Builder implements Contracts\BuilderInterface
 {
     /* ------------------------------------------------------------------------------------------------
      |  Properties
@@ -16,20 +16,24 @@ class Builder
      */
     /** @var string */
     protected $path;
+
     /** @var string */
     protected $image_path;
+
     /** @var string */
     protected $text     = '';
 
     /** @var int */
     protected $size     = 0;
     /** @var int */
-    protected $module_size;
+    protected $moduleSize;
 
     /** @var int */
     protected $padding  = 16;
 
     protected $version;
+
+    protected $imageType;
 
     /** @const string Image type png */
     const IMAGE_TYPE_PNG = 'png';
@@ -62,10 +66,10 @@ class Builder
     const LEVEL_HIGH = 2;
 
     /** @var int */
-    protected $error_correction = self::LEVEL_MEDIUM;
+    protected $errorCorrection = self::LEVEL_MEDIUM;
 
     /** @var array */
-    protected $error_corrections_available = [
+    protected $availableErrorCorrections = [
         self::LEVEL_LOW,
         self::LEVEL_MEDIUM,
         self::LEVEL_QUARTILE,
@@ -89,7 +93,8 @@ class Builder
      */
     function __construct()
     {
-        $this->encodeManager         = new Modes\Manager;
+        $this->encodeManager        = new Modes\ModesManager;
+        $this->imageType            = new ImageType;
         $this->frontDefaultColor    = (new Color)->black();
         $this->backDefaultColor     = (new Color)->white();
     }
@@ -99,29 +104,52 @@ class Builder
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Return path to the data directory
+     * Return text that will be hid in QR Code
      *
      * @return string
      */
-    public function getPath()
+    public function getText()
     {
-        return $this->path;
+        return $this->text;
     }
 
     /**
-     * @param mixed $path
+     * Set text to hide in QR Code
+     *
+     * @param string $text Text to hide
+     *
+     * @return Builder
      */
-    public function setPath($path)
+    public function setText($text)
     {
-        $this->path = $path;
+        $this->text = $text;
+        $this->encodeManager->setData($text);
+
+        return $this;
     }
 
     /**
+     * Get the generated image resource
+     *
      * @return resource
      */
     public function getImage()
     {
+        if ( ! $this->hasImage() ) {
+            $this->create();
+        }
+
         return $this->image;
+    }
+
+    /**
+     * Return path to the data directory
+     *
+     * @return string
+     */
+    private function getDataPath()
+    {
+        return qr_code_assets_path('data');
     }
 
     /**
@@ -129,17 +157,9 @@ class Builder
      *
      * @return string
      */
-    public function getImagePath()
+    private function getImagePath()
     {
-        return $this->image_path;
-    }
-
-    /**
-     * @param mixed $image_path
-     */
-    public function setImagePath($image_path)
-    {
-        $this->image_path = $image_path;
+        return qr_code_assets_path('image');
     }
 
     /**
@@ -155,51 +175,43 @@ class Builder
     /**
      * Set QR Code version
      *
-     * @param  int    $version QR Code version
-     * @return QrCode
+     * @param int $version
+     *
+     * @return Builder
      */
     public function setVersion($version)
     {
         if ( $this->checkVersion($version) ) {
             $this->version = $version;
         }
+
+        return $this;
     }
 
     /**
-     * Return text that will be hid in QR Code
+     * Return foreground color of the QR Code
      *
-     * @return string
+     * @return Color
      */
-    public function getText()
+    public function getForegroundColor()
     {
-        return $this->text;
-    }
-
-    /**
-     * Set text to hide in QR Code
-     *
-     * @param  string $text Text to hide
-     * @return QrCode
-     */
-    public function setText($text)
-    {
-        $this->text = $text;
-        $this->encodeManager->setData($text);
+        return $this->frontColor;
     }
 
     /**
      * Set foreground color of the QR Code
      *
-     * @param  array  $color_foreground RGB color
-     * @return QrCode
+     * @param array $foregroundColor
+     *
+     * @return Builder
      */
-    public function setForegroundColor($color_foreground)
+    public function setForegroundColor($foregroundColor)
     {
         if ( is_null($this->frontColor) ) {
             $this->frontColor = new Color;
         }
 
-        $this->frontColor->setFromArray($color_foreground);
+        $this->frontColor->setFromArray($foregroundColor);
 
         return $this;
     }
@@ -221,6 +233,34 @@ class Builder
     }
 
     /**
+     * Return background color of the QR Code
+     *
+     * @return Color
+     */
+    public function getBackgroundColor()
+    {
+        return $this->backColor;
+    }
+
+    /**
+     * Set background color of the QR Code
+     *
+     * @param array $backgroundColor
+     *
+     * @return Builder
+     */
+    public function setBackgroundColor($backgroundColor)
+    {
+        if ( is_null($this->backColor) ) {
+            $this->backColor = new Color;
+        }
+
+        $this->backColor->setFromArray($backgroundColor);
+
+        return $this;
+    }
+
+    /**
      * @param string $backgroundHexColor
      *
      * @return Builder
@@ -237,84 +277,38 @@ class Builder
     }
 
     /**
-     * Return foreground color of the QR Code
-     *
-     * @return Color
-     */
-    public function getForegroundColor()
-    {
-        return $this->frontColor;
-    }
-
-    /**
-     * Set background color of the QR Code
-     *
-     * @param  array  $color_background RGB color
-     * @return QrCode
-     */
-    public function setBackgroundColor($color_background)
-    {
-        if ( is_null($this->backColor) ) {
-            $this->backColor = new Color;
-        }
-
-        $this->backColor->setFromArray($color_background);
-
-        return $this;
-    }
-
-    /**
-     * Return background color of the QR Code
-     *
-     * @return Color
-     */
-    public function getBackgroundColor()
-    {
-        return $this->backColor;
-    }
-
-    /**
      * Return image type for rendering
      *
      * @return string
      */
-    public function getImageType()
+    public function getImageFormat()
     {
-        return $this->image_type;
+        return $this->imageType->get();
     }
 
     /**
      * Set image type for rendering
      *
-     * @param  string $image_type Image type
+     * @param  string $type - Image type
      */
-    public function setImageType($image_type)
+    public function setImageFormat($type)
     {
-        if ( $this->isInAvailableImageTypes($image_type) ) {
-            $this->image_type = $image_type;
-        }
+        $this->imageType->set($type);
     }
 
-    /**
-     * Set image type for rendering via extension
-     *
-     * @param  string $extension Image extension
-     * @return QrCode
-     */
-    public function setExtension($extension)
+    public function getFunctionName()
     {
-        if ( $extension == 'jpg') {
-            $this->setImageType('jpeg');
-        } else {
-            $this->setImageType($extension);
-        }
+        return $this->imageType->getFunctionName();
+    }
 
-        return $this;
+    public function setFilename($filename)
+    {
+        $this->imageType->setTypeFromFilename($filename);
     }
 
     public function getAvailableImageTypes()
     {
-        return $this->image_types_available;
+        return $this->imageType->getAllAvailable();
     }
 
     /**
@@ -322,27 +316,14 @@ class Builder
      *
      * @param  int    $n
      * @param  int    $m
-     * @param  int    $parity        Parity
-     * @param  string $original_data Original data
+     * @param  int    $parity
+     * @param  string $originalData
      *
-     * @return QrCode
+     * @return Builder
      */
-    public function setStructureAppend($n, $m, $parity, $original_data)
+    public function setStructureAppend($n, $m, $parity, $originalData)
     {
-        $this->encodeManager->setStructureAppend($n, $m, $parity, $original_data);
-    }
-
-    /**
-     * Set QR Code error correction level
-     *
-     * @param  int    $error_correction Error Correction Level
-     * @return QrCode
-     */
-    public function setErrorCorrection($error_correction)
-    {
-        if ( $this->isInErrorCorrections($error_correction) ) {
-            $this->error_correction = $error_correction;
-        }
+        $this->encodeManager->setStructureAppend($n, $m, $parity, $originalData);
 
         return $this;
     }
@@ -354,7 +335,23 @@ class Builder
      */
     public function getErrorCorrection()
     {
-        return $this->error_correction;
+        return $this->errorCorrection;
+    }
+
+    /**
+     * Set QR Code error correction level
+     *
+     * @param  int $errorCorrection
+     *
+     * @return Builder
+     */
+    public function setErrorCorrection($errorCorrection)
+    {
+        if ( $this->isInErrorCorrections($errorCorrection) ) {
+            $this->errorCorrection = $errorCorrection;
+        }
+
+        return $this;
     }
 
     /**
@@ -364,7 +361,7 @@ class Builder
      */
     private function getAvailableErrorCorrections()
     {
-        return $this->error_corrections_available;
+        return $this->availableErrorCorrections;
     }
 
     /**
@@ -374,34 +371,24 @@ class Builder
      */
     public function getModuleSize()
     {
-        if ( is_null($this->module_size) )
+        if ( is_null($this->moduleSize) )
         {
-            $this->module_size = $this->getImageType() == "jpeg" ? 8 : 4;
+            $this->moduleSize = $this->getImageFormat() == "jpeg" ? 8 : 4;
         }
 
-        return $this->module_size;
+        return $this->moduleSize;
     }
 
     /**
      * Set QR Code module size
      *
-     * @param  int    $module_size Module size
-     * @return QrCode
-     */
-    public function setModuleSize($module_size)
-    {
-        $this->module_size = $module_size;
-    }
-
-    /**
-     * Set QR Code size (width)
+     * @param int $moduleSize
      *
-     * @param  int    $size Width of the QR Code
-     * @return QrCode
+     * @return Builder
      */
-    public function setSize($size)
+    public function setModuleSize($moduleSize)
     {
-        $this->size = $size;
+        $this->moduleSize = $moduleSize;
     }
 
     /**
@@ -415,14 +402,17 @@ class Builder
     }
 
     /**
-     * Set padding around the QR Code
+     * Set QR Code size (width)
      *
-     * @param  int    $padding Padding around QR Code
-     * @return QrCode
+     * @param int $size
+     *
+     * @return Builder
      */
-    public function setPadding($padding)
+    public function setSize($size)
     {
-        $this->padding = $padding;
+        $this->size = $size;
+
+        return $this;
     }
 
     /**
@@ -435,15 +425,29 @@ class Builder
         return $this->padding;
     }
 
+    /**
+     * Set padding around the QR Code
+     *
+     * @param int $padding
+     *
+     * @return Builder
+     */
+    public function setPadding($padding)
+    {
+        $this->padding = $padding;
+
+        return $this;
+    }
+
 
     /**
-     * Get Text Length
+     * Get the Text/Data Length
      *
      * @return int
      */
-    protected function getDataLength()
+    private function getDataLength()
     {
-        return strlen($this->getText());
+        return strlen( $this->getText() );
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -453,7 +457,7 @@ class Builder
     /**
      * Create the image.
      *
-     * @throws DataDoesntExistsException
+     * @throws DataDoesNotExistsException
      * @throws VersionTooLargeException
      * @throws ImageSizeTooLargeException
      * @throws OverflowException
@@ -461,7 +465,7 @@ class Builder
     public function create()
     {
         if ( ! $this->hasData() ) {
-            throw new DataDoesntExistsException('QRCode: Data does not exists.');
+            throw new DataDoesNotExistsException('QRCode: Data does not exists.');
         }
 
         // Determine encode mode
@@ -506,12 +510,12 @@ class Builder
         // RS-ECC prepare
         $codewords      = $this->prepareRsEcc($max_data_codewords, $codewords, $rso, $rs_ecc_codewords, $rs_cal_table_array);
 
-        $matrix_content = $this->getMatrixContent($codewords, $masks, $matX, $matY);
+        $matrixContent  = $this->getMatrixContent($codewords, $masks, $matX, $matY);
 
         // Format information
-        $matrix_content = $this->formatInformation($matrix_content, $fi_x, $fi_y);
+        $matrixContent  = $this->formatInformation($matrixContent, $fi_x, $fi_y);
 
-        $this->createImage($matrix_content);
+        $this->createImage($matrixContent);
 
         return $this->image;
     }
@@ -766,9 +770,9 @@ class Builder
      *
      * @return string
      */
-    public function getDatFilePath($filename)
+    private function getDatFilePath($filename)
     {
-        return "{$this->getPath()}/{$filename}.dat";
+        return "{$this->getDataPath()}/{$filename}.dat";
     }
 
     /**
@@ -794,9 +798,9 @@ class Builder
         return ! empty($this->image);
     }
 
-    public function isInAvailableImageTypes($image_type)
+    public function isInAvailableImageTypes($type)
     {
-        return in_array($image_type, $this->getAvailableImageTypes());
+        return $this->imageType->isAvailable($type);
     }
 
     /**

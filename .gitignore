@@ -1,4 +1,8 @@
 .idea/
 vendor/
+_arcanedev/
 composer.phar
 composer.lock
+
+# Ignore exemple Files
+exemples/qr-code-name.png

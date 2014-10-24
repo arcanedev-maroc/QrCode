@@ -27,7 +27,7 @@ class AlphanumericMode extends Base\EncodeMode
      */
     protected function encode()
     {
-        $this->init(2, 9);
+        parent::init(2, 9);
 
         $i = 0;
 
@@ -55,7 +55,7 @@ class AlphanumericMode extends Base\EncodeMode
      *
      * @return mixed
      */
-    protected function getHashedCharacter($index)
+    private function getHashedCharacter($index)
     {
         return $this->alphanumericCharacterHash[$this->getOneSegmentFromText($index)];
     }

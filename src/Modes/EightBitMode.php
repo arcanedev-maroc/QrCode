@@ -25,7 +25,7 @@ class EightBitMode extends Base\EncodeMode
      */
     protected function encode()
     {
-        $this->init(4, 8);
+        parent::init(4, 8);
 
         $i = 0;
 

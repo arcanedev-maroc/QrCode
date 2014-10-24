@@ -1,3 +1,3 @@
-<?php namespace Arcanedev\QrCode\Exceptions;
+<?php namespace Arcanedev\QrCode\Entities\Exceptions;
 
 class ImageFunctionUnknownException extends \Exception {}

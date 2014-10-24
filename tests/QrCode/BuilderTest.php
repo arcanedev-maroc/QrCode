@@ -1,43 +1,32 @@
 <?php namespace Arcanedev\QrCode\Tests;
 
-use Arcanedev\QrCode\QrCode                     as QrCode;
-use Arcanedev\QrCode\Contracts\QrCodeInterface  as QrCodeInterface;
+use Arcanedev\QrCode\Builder                    as Builder;
+use Arcanedev\QrCode\Contracts\BuilderInterface as BuilderInterface;
 
-class QrCodeTest extends \PHPUnit_Framework_TestCase
+class BuilderTest extends \PHPUnit_Framework_TestCase
 {
     /* ------------------------------------------------------------------------------------------------
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /* @var QrCode */
-    protected $qrCode;
+    /* @var Builder */
+    protected $builder;
 
     /* ------------------------------------------------------------------------------------------------
-     |  Main Functions
+     |  Main Function
      | ------------------------------------------------------------------------------------------------
      */
     protected function setUp()
     {
-        $this->qrCode = new QrCode;
+        $this->builder = new Builder;
     }
 
     /* ------------------------------------------------------------------------------------------------
      |  Test Functions
      | ------------------------------------------------------------------------------------------------
      */
-    public function testCreateQrCode()
+    public function testCanCreateBuilder()
     {
-        $this->qrCode->setText("Test this test");
-        $this->qrCode->setSize(300);
-        $this->qrCode->get();
-
         $this->assertTrue(true);
-    }
-
-    public function testIfThereIsMoreTests()
-    {
-        // TODO: Add more tests
-
-        $this->assertFalse(false);
     }
 }

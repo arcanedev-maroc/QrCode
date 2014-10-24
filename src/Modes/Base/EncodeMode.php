@@ -1,6 +1,8 @@
 <?php namespace Arcanedev\QrCode\Modes\Base;
 
-abstract class EncodeMode
+use Arcanedev\QrCode\Modes\Contracts\EncodeModeInterface;
+
+abstract class EncodeMode implements EncodeModeInterface
 {
     /* ------------------------------------------------------------------------------------------------
      |  Properties
@@ -26,6 +28,9 @@ abstract class EncodeMode
     /* ------------------------------------------------------------------------------------------------
      |  Getters & Setters
      | ------------------------------------------------------------------------------------------------
+     */
+    /**
+     * @return mixed
      */
     protected function getData()
     {

@@ -1,6 +1,6 @@
 <?php namespace Arcanedev\QrCode\Modes;
 
-class Manager
+class ModesManager implements Contracts\ModesManagerInterface
 {
     /* ------------------------------------------------------------------------------------------------
      |  Properties
@@ -13,12 +13,21 @@ class Manager
     protected $structure_append_parity;
     protected $structure_append_original_data;
 
-    /** @var NumericMode|AlphanumericMode|EightBitMode */
+    /** @var NumericMode | AlphanumericMode | EightBitMode */
     protected $mode;
+
+    const NUMERIC_MODE          = "numeric";
+    const ALPHA_NUMERIC_MODE    = "alpha-numeric";
+    const EIGHT_BITS_MODE       = "8bits";
 
     /* ------------------------------------------------------------------------------------------------
      |  Getters & Setters
      | ------------------------------------------------------------------------------------------------
+     */
+    /**
+     * @param $data
+     *
+     * @return ModesManager
      */
     public function setData($data)
     {
@@ -29,6 +38,12 @@ class Manager
         return $this;
     }
 
+    /**
+     * @param $n
+     * @param $m
+     * @param $parity
+     * @param $original_data
+     */
     public function setStructureAppend($n, $m, $parity, $original_data)
     {
         $this->structure_append_n               = $n;
@@ -46,17 +61,15 @@ class Manager
     }
 
     /* ------------------------------------------------------------------------------------------------
-     |  Function
+     |  Main Function
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * @return Manager
+     * @return ModesManager
      */
     private function init()
     {
-        $this->mode = $this->isNumericData()
-            ? new NumericMode
-            : ( $this->isAlphaNumericData() ? new AlphanumericMode : new EightBitMode );
+        $this->mode = $this->switchMode();
 
         $this->mode->setDatas($this->data, $this->prepareDataBits());
 
@@ -111,6 +124,42 @@ class Manager
         $data_bits[$data_counter] = 4;
 
         return $data_bits;
+    }
+
+    /**
+     * Get the encoding mode name
+     *
+     * @return string
+     */
+    public function getModeName()
+    {
+        return $this->isNumericData()
+            ? self::NUMERIC_MODE
+            : ( $this->isAlphaNumericData()
+                ? self::ALPHA_NUMERIC_MODE
+                : self::EIGHT_BITS_MODE
+            );
+    }
+
+    /**
+     * Switch the Encoding mode
+     *
+     * @return AlphanumericMode | EightBitMode | NumericMode
+     */
+    private function switchMode()
+    {
+        switch ( $this->getModeName() )
+        {
+            case self::NUMERIC_MODE:
+                return new NumericMode;
+
+            case self::ALPHA_NUMERIC_MODE:
+                return new AlphanumericMode;
+
+            case self::EIGHT_BITS_MODE:
+            default:
+                return new EightBitMode;
+        }
     }
 
     /* ------------------------------------------------------------------------------------------------

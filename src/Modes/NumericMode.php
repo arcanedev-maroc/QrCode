@@ -25,7 +25,7 @@ class NumericMode extends Base\EncodeMode
      */
     protected function encode()
     {
-        $this->init(1, 10);
+        parent::init(1, 10);
 
         $i = 0;
 
