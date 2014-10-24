@@ -71,6 +71,7 @@ class ImageTypeTest extends \PHPUnit_Framework_TestCase
         $this->imageType->set('svg');
     }
 
+    /** @test */
     public function testCanGetTypeAndExtensionFromFilename()
     {
         $this->imageType->setTypeFromFilename('images/qr-code.png');
@@ -104,5 +105,37 @@ class ImageTypeTest extends \PHPUnit_Framework_TestCase
     public function testSetFilenameWithoutExtensionMustThrowException()
     {
         $this->imageType->setTypeFromFilename('nicolas-cage');
+    }
+
+    /** @test */
+    public function testTypeIsAvailable()
+    {
+        $this->assertTrue($this->imageType->isAvailable('png'));
+        $this->assertTrue($this->imageType->isAvailable('gif'));
+        $this->assertTrue($this->imageType->isAvailable('jpg'));
+        $this->assertTrue($this->imageType->isAvailable('wbmp'));
+    }
+
+    public function testGetFunctionNameFromType()
+    {
+        $this->assertEquals('imagepng', $this->imageType->set('png')->getFunctionName());
+        $this->assertEquals('imagejpeg', $this->imageType->set('jpg')->getFunctionName());
+        $this->assertEquals('imagegif', $this->imageType->set('gif')->getFunctionName());
+        $this->assertEquals('imagewbmp', $this->imageType->set('wbmp')->getFunctionName());
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testImageHeader()
+    {
+        $this->imageType->set('png')->header();
+        $this->assertEquals(['Content-Type: image/png'], xdebug_get_headers());
+
+        $this->imageType->set('jpg')->header();
+        $this->assertEquals(['Content-Type: image/jpeg'], xdebug_get_headers());
+
+        $this->imageType->set('gif')->header();
+        $this->assertEquals(['Content-Type: image/gif'], xdebug_get_headers());
     }
 }

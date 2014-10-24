@@ -1,8 +1,10 @@
 <?php namespace Arcanedev\QrCode;
 
 use Arcanedev\QrCode\Entities\Color;
+use Arcanedev\QrCode\Entities\ErrorCorrection;
 use Arcanedev\QrCode\Entities\ImageType;
 
+use Arcanedev\QrCode\Entities\Mask;
 use Arcanedev\QrCode\Exceptions\DataDoesNotExistsException;
 use Arcanedev\QrCode\Exceptions\ImageSizeTooLargeException;
 use Arcanedev\QrCode\Exceptions\VersionTooLargeException;
@@ -15,16 +17,11 @@ class Builder implements Contracts\BuilderInterface
      | ------------------------------------------------------------------------------------------------
      */
     /** @var string */
-    protected $path;
-
-    /** @var string */
-    protected $image_path;
-
-    /** @var string */
     protected $text     = '';
 
     /** @var int */
     protected $size     = 0;
+
     /** @var int */
     protected $moduleSize;
 
@@ -33,48 +30,11 @@ class Builder implements Contracts\BuilderInterface
 
     protected $version;
 
+    /** @var ImageType */
     protected $imageType;
 
-    /** @const string Image type png */
-    const IMAGE_TYPE_PNG = 'png';
-    /** @const string Image type gif */
-    const IMAGE_TYPE_GIF = 'gif';
-    /** @const string Image type jpeg */
-    const IMAGE_TYPE_JPEG = 'jpeg';
-    /** @const string Image type wbmp */
-    const IMAGE_TYPE_WBMP = 'wbmp';
-    /** @var string */
-    protected $image_type = self::IMAGE_TYPE_PNG;
-    /** @var array */
-    protected $image_types_available = [
-        self::IMAGE_TYPE_GIF,
-        self::IMAGE_TYPE_PNG,
-        self::IMAGE_TYPE_JPEG,
-        self::IMAGE_TYPE_WBMP
-    ];
-
-    /** @const int Error Correction Level Low (7%) */
-    const LEVEL_LOW = 1;
-
-    /** @const int Error Correction Level Medium (15%) */
-    const LEVEL_MEDIUM = 0;
-
-    /** @const int Error Correction Level Quartile (25%) */
-    const LEVEL_QUARTILE = 3;
-
-    /** @const int Error Correction Level High (30%) */
-    const LEVEL_HIGH = 2;
-
-    /** @var int */
-    protected $errorCorrection = self::LEVEL_MEDIUM;
-
-    /** @var array */
-    protected $availableErrorCorrections = [
-        self::LEVEL_LOW,
-        self::LEVEL_MEDIUM,
-        self::LEVEL_QUARTILE,
-        self::LEVEL_HIGH
-    ];
+    /** @var ErrorCorrection */
+    protected $errorCorrection;
 
     protected $encodeManager;
 
@@ -97,6 +57,7 @@ class Builder implements Contracts\BuilderInterface
         $this->imageType            = new ImageType;
         $this->frontDefaultColor    = (new Color)->black();
         $this->backDefaultColor     = (new Color)->white();
+        $this->errorCorrection      = new ErrorCorrection;
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -335,7 +296,7 @@ class Builder implements Contracts\BuilderInterface
      */
     public function getErrorCorrection()
     {
-        return $this->errorCorrection;
+        return $this->errorCorrection->get();
     }
 
     /**
@@ -347,22 +308,11 @@ class Builder implements Contracts\BuilderInterface
      */
     public function setErrorCorrection($errorCorrection)
     {
-        if ( $this->isInErrorCorrections($errorCorrection) ) {
-            $this->errorCorrection = $errorCorrection;
-        }
+        $this->errorCorrection->set($errorCorrection);
 
         return $this;
     }
 
-    /**
-     * Return QR Code available error correction levels
-     *
-     * @return array
-     */
-    private function getAvailableErrorCorrections()
-    {
-        return $this->availableErrorCorrections;
-    }
 
     /**
      * Return QR Code module size
@@ -470,50 +420,51 @@ class Builder implements Contracts\BuilderInterface
 
         // Determine encode mode
         $encodeResults =  $this->encodeManager->getResults();
-        list($codeword_num_plus, $data_value, $data_counter, $data_bits, $codeword_num_counter_value) = $encodeResults;
+        list($codewordNumPlus, $dataValue, $dataCounter, $dataBits, $codewordNumCounterValue) = $encodeResults;
 
-        if ( array_key_exists($data_counter, $data_bits) && $data_bits[$data_counter] > 0) {
-            $data_counter++;
+        if ( array_key_exists($dataCounter, $dataBits) && $dataBits[$dataCounter] > 0) {
+            $dataCounter++;
         }
 
-        $total_data_bits    = $this->getDataBitsTotal($data_bits, $data_counter);
+        $totalDataBits    = $this->getDataBitsTotal($dataBits, $dataCounter);
 
-        $max_data_bits      = $this->getMaxDataBits($codeword_num_plus, $total_data_bits);
+        $maxDataBits      = $this->getMaxDataBits($codewordNumPlus, $totalDataBits);
 
         if ( $this->isVersionTooLarge() ) {
             throw new VersionTooLargeException('QRCode : version too large');
         }
 
-        $total_data_bits                        += $codeword_num_plus[$this->getVersion()];
-        $data_bits[$codeword_num_counter_value] += $codeword_num_plus[$this->getVersion()];
+        $totalDataBits                      += $codewordNumPlus[$this->getVersion()];
+        $dataBits[$codewordNumCounterValue] += $codewordNumPlus[$this->getVersion()];
 
         // Read version ECC data file
-        $fp1                    = fopen ($this->getEccDatFilePath(), "rb");
-        $matX                   = fread($fp1, $this->getByteNumber());
-        $matY                   = fread($fp1, $this->getByteNumber());
-        $masks                  = fread($fp1, $this->getByteNumber());
-        $fi_x                   = fread($fp1, 15);
-        $fi_y                   = fread($fp1, 15);
-        $rs_ecc_codewords       = ord(fread($fp1, 1));
-        $rso                    = fread($fp1, 128);
+        $fp1            = fopen($this->getEccDatFilePath(), "rb");
+        $matX           = fread($fp1, $this->getByteNumber());
+        $matY           = fread($fp1, $this->getByteNumber());
+        $masks          = fread($fp1, $this->getByteNumber());
+        $fi_x           = fread($fp1, 15);
+        $fi_y           = fread($fp1, 15);
+        $rsEccCodewords = ord(fread($fp1, 1));
+        $rso            = fread($fp1, 128);
         fclose($fp1);
 
-        $max_data_codewords     = ($max_data_bits >> 3);
 
-        $rs_cal_table_array     = $this->getRSCalTableArray($rs_ecc_codewords);
+        $rsCalTableArray    = $this->getRSCalTableArray($rsEccCodewords);
 
         // Set terminator
-        list($data_value, $data_bits) = $this->setTerminator($total_data_bits, $max_data_bits, $data_value, $data_counter, $data_bits);
+        list($dataValue, $dataBits) = $this->setTerminator($dataValue, $dataCounter, $dataBits, $totalDataBits, $maxDataBits);
 
-        $codewords      = $this->getCodewords($data_counter, $data_value, $data_bits, $max_data_codewords);
+        $maxDataCodewords   = ($maxDataBits >> 3);
+
+        $codewords          = $this->getCodewords($dataValue, $dataCounter, $dataBits, $maxDataCodewords);
 
         // RS-ECC prepare
-        $codewords      = $this->prepareRsEcc($max_data_codewords, $codewords, $rso, $rs_ecc_codewords, $rs_cal_table_array);
+        $codewords          = $this->prepareRsEcc($maxDataCodewords, $codewords, $rso, $rsEccCodewords, $rsCalTableArray);
 
-        $matrixContent  = $this->getMatrixContent($codewords, $masks, $matX, $matY);
+        $matrixContent      = $this->getMatrixContent($codewords, $masks, $matX, $matY);
 
         // Format information
-        $matrixContent  = $this->formatInformation($matrixContent, $fi_x, $fi_y);
+        $matrixContent      = $this->formatInformation($matrixContent, $fi_x, $fi_y);
 
         $this->createImage($matrixContent);
 
@@ -546,7 +497,47 @@ class Builder implements Contracts\BuilderInterface
         return $total_data_bits;
     }
 
-    private function getMaxDataBits($codeword_num_plus, $total_data_bits)
+    private function getMaxDataBits($codewordNumPlus, $dataBitsTotal)
+    {
+        if ( $this->hasVersion() && $this->isVersionNumeric() ) {
+            $index = $this->getVersion() + 40 * $this->getEccCharacter();
+
+            return $this->getMaxDataBitsByIndexFormArray($index);
+        }
+
+        return $this->autoVersionAndGetMaxDataBits($codewordNumPlus, $dataBitsTotal);
+    }
+
+    /**
+     * Auto version select and Get Max Data Bits
+     *
+     * @param $codewordNumPlus
+     * @param $dataBitsTotal
+     *
+     * @return int
+     */
+    private function autoVersionAndGetMaxDataBits($codewordNumPlus, $dataBitsTotal)
+    {
+        $i          = 1 + 40 * $this->getEccCharacter();
+        $j          = $i + 39;
+        $version    = 1;
+
+        while ($i <= $j) {
+            $maxDataBits = $this->getMaxDataBitsByIndexFormArray($i);
+
+            if ( ($maxDataBits) >= ($dataBitsTotal + $codewordNumPlus[$version]) ) {
+                $this->setVersion($version);
+
+                return $maxDataBits;
+            }
+
+            $i++; $version++;
+        }
+
+        return 0;
+    }
+
+    private function getMaxDataBitsByIndexFormArray($index)
     {
         $maxDataBitsArray = [
             0, 128, 224, 352, 512, 688, 864, 992, 1232, 1456, 1728,
@@ -570,140 +561,19 @@ class Builder implements Contracts\BuilderInterface
             8264,8920,9368,9848,10288,10832,11408,12016,12656,13328
         ];
 
-        if ( $this->isVersionNumeric() && $this->getVersion() ) {
-            return $maxDataBitsArray[$this->getVersion() + 40 * $this->getEccCharacter()];
-        }
-
-        // Auto version select
-        $i       = 1 + 40 * $this->getEccCharacter();
-        $j       = $i + 39;
-        $version = 1;
-
-        while ($i <= $j)
-        {
-            if ( ($maxDataBitsArray[$i]) >= ($total_data_bits + $codeword_num_plus[$version]) ) {
-                $this->setVersion($version);
-
-                return $maxDataBitsArray[$i];
-            }
-
-            $i++;
-            $version++;
-        }
-
-        return 0;
+        return $maxDataBitsArray[$index];
     }
 
     /**
-     * @param $matrix_content
+     * @param $matrixContent
      *
      * @return int
      */
-    private function getMaskNumber($matrix_content)
+    private function getMaskNumber($matrixContent)
     {
-        $max_modules_1side              = $this->getMaxModulesOneSide();
+        $mask   = new Mask($matrixContent, $this->getMaxModulesOneSide(), $this->getByteNumber());
 
-        list($hor_master, $ver_master)  = $this->getMaskSelect($matrix_content);
-
-        $i                  = 0;
-        $all_matrix         = $max_modules_1side * $max_modules_1side;
-        $mask_number        = 0;
-        $min_demerit_score  = 0;
-
-        while ($i < 8)
-        {
-            $demerit_n1     = 0;
-            $ptn_temp       = [];
-            $bit            = 1<< $i;
-            $bit_r          = (~$bit) & 255;
-            $bit_mask       = str_repeat(chr($bit), $all_matrix);
-            $hor            = $hor_master & $bit_mask;
-            $ver            = $ver_master & $bit_mask;
-
-            $ver_shift1     = $ver . str_repeat(chr(170), $max_modules_1side);
-            $ver_shift2     = str_repeat(chr(170), $max_modules_1side) . $ver;
-            $ver_shift1_0   = $ver.str_repeat(chr(0), $max_modules_1side);
-            $ver_shift2_0   = str_repeat(chr(0), $max_modules_1side) . $ver;
-            $ver_or         = chunk_split(~($ver_shift1 | $ver_shift2), $max_modules_1side, chr(170));
-            $ver_and        = chunk_split(~($ver_shift1_0 & $ver_shift2_0), $max_modules_1side, chr(170));
-
-            $hor            = chunk_split(~$hor, $max_modules_1side, chr(170));
-            $ver            = chunk_split(~$ver, $max_modules_1side, chr(170));
-            $hor            = $hor . chr(170) . $ver;
-
-            $n1_search      = "/" . str_repeat(chr(255), 5) . "+|" . str_repeat(chr($bit_r), 5). "+/";
-            $n3_search      = chr($bit_r) . chr(255) . chr($bit_r) . chr($bit_r) . chr($bit_r) . chr(255) . chr($bit_r);
-
-            $demerit_n3     = substr_count($hor, $n3_search) * 40;
-            $demerit_n4     = floor(abs(( (100 * (substr_count($ver, chr($bit_r)) / $this->getByteNumber()) ) - 50) / 5)) * 10;
-
-            $n2_search1     = "/" . chr($bit_r) . chr($bit_r) . "+/";
-            $n2_search2     = "/" . chr(255) . chr(255) . "+/";
-            $demerit_n2     = 0;
-            preg_match_all($n2_search1, $ver_and, $ptn_temp);
-
-            foreach ($ptn_temp[0] as $str_temp)
-            {
-                $demerit_n2 += (strlen($str_temp) - 1);
-            }
-
-            $ptn_temp = [];
-            preg_match_all($n2_search2, $ver_or, $ptn_temp);
-
-            foreach ($ptn_temp[0] as $str_temp)
-            {
-                $demerit_n2 += (strlen($str_temp) - 1);
-            }
-
-            $demerit_n2 *= 3;
-
-            $ptn_temp = [];
-
-            preg_match_all($n1_search, $hor, $ptn_temp);
-
-            foreach ($ptn_temp[0] as $str_temp)
-            {
-                $demerit_n1 += (strlen($str_temp) - 2);
-            }
-
-            $demerit_score = $demerit_n1+$demerit_n2+$demerit_n3+$demerit_n4;
-
-            if ($demerit_score <= $min_demerit_score || $i==0)
-            {
-                $mask_number        = $i;
-                $min_demerit_score  = $demerit_score;
-            }
-
-            $i++;
-        }
-
-        return $mask_number;
-    }
-
-    /**
-     * @param $matrix_content
-     *
-     * @return array
-     */
-    private function getMaskSelect($matrix_content)
-    {
-        $max_modules_1side = $this->getMaxModulesOneSide();
-
-        $hor_master = "";
-        $ver_master = "";
-        $k = 0;
-
-        while ($k < $max_modules_1side) {
-            $l = 0;
-            while ($l < $max_modules_1side) {
-                $hor_master = $hor_master . chr($matrix_content[$l][$k]);
-                $ver_master = $ver_master . chr($matrix_content[$k][$l]);
-                $l++;
-            }
-            $k++;
-        }
-
-        return [$hor_master, $ver_master];
+        return $mask->getNumber();
     }
 
     /**
@@ -712,8 +582,8 @@ class Builder implements Contracts\BuilderInterface
     private function getOneMatrixRemainBit()
     {
         $matrixRemainBitArray = [
-            0,0,7,7,7,7,7,0,0,0,0,0,0,0,3,3,3,3,3,3,3,
-            4,4,4,4,4,4,4,3,3,3,3,3,3,3,0,0,0,0,0,0
+            0, 0, 7, 7, 7, 7, 7, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3,
+            4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0
         ];
 
         return $matrixRemainBitArray[$this->getVersion()];
@@ -748,6 +618,16 @@ class Builder implements Contracts\BuilderInterface
     }
 
     /**
+     * @param $filename
+     *
+     * @return string
+     */
+    private function getDatFilePath($filename)
+    {
+        return "{$this->getDataPath()}/{$filename}.dat";
+    }
+
+    /**
      * @return string
      */
     private function getEccDatFilePath()
@@ -763,16 +643,6 @@ class Builder implements Contracts\BuilderInterface
     private function getRSCDatFilePath($rs_ecc_codewords)
     {
         return $this->getDatFilePath("rsc{$rs_ecc_codewords}");
-    }
-
-    /**
-     * @param $filename
-     *
-     * @return string
-     */
-    private function getDatFilePath($filename)
-    {
-        return "{$this->getDataPath()}/{$filename}.dat";
     }
 
     /**
@@ -804,16 +674,6 @@ class Builder implements Contracts\BuilderInterface
     }
 
     /**
-     * @param $error_correction
-     *
-     * @return bool
-     */
-    private function isInErrorCorrections($error_correction)
-    {
-        return in_array($error_correction, $this->getAvailableErrorCorrections());
-    }
-
-    /**
      * Check if the version is a correct one
      *
      * @param int $version
@@ -837,6 +697,11 @@ class Builder implements Contracts\BuilderInterface
     private function isVersionNumeric()
     {
         return is_numeric($this->getVersion());
+    }
+
+    private function hasVersion()
+    {
+        return ! is_null($this->getVersion()) && $this->isVersionNumeric();
     }
 
     private function isVersionTooLarge()
@@ -956,8 +821,8 @@ class Builder implements Contracts\BuilderInterface
             "010010010110100", "010000110000011", "010111011011010", "010101111101101"
         ];
 
-        $format_information_x1 = [0, 1, 2, 3, 4, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8];
-        $format_information_y1 = [8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1, 0];
+        $format_information_x1  = [0, 1, 2, 3, 4, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8];
+        $format_information_y1  = [8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1, 0];
         $format_information_x2  = unpack("C*", $fi_x);
         $format_information_y2  = unpack("C*", $fi_y);
 
@@ -975,32 +840,32 @@ class Builder implements Contracts\BuilderInterface
     }
 
     /**
-     * @param $total_data_bits
-     * @param $max_data_bits
-     * @param $data_value
-     * @param $data_counter
-     * @param $data_bits
+     * @param $totalDataBits
+     * @param $maxDataBits
+     * @param $dataValue
+     * @param $dataCounter
+     * @param $dataBits
      *
      * @return array
      */
-    private function setTerminator($total_data_bits, $max_data_bits, $data_value, $data_counter, $data_bits)
+    private function setTerminator($dataValue, $dataCounter, $dataBits, $totalDataBits, $maxDataBits)
     {
-        if ( $total_data_bits <= ($max_data_bits - 4) ) {
-            $data_value[$data_counter]  = 0;
-            $data_bits[$data_counter]   = 4;
+        if ( $totalDataBits <= ($maxDataBits - 4) ) {
+            $dataValue[$dataCounter]  = 0;
+            $dataBits[$dataCounter]   = 4;
         }
         else {
-            if ( $total_data_bits < $max_data_bits ) {
-                $data_value[$data_counter]  = 0;
-                $data_bits[$data_counter]   = $max_data_bits - $total_data_bits;
+            if ( $totalDataBits < $maxDataBits ) {
+                $dataValue[$dataCounter]  = 0;
+                $dataBits[$dataCounter]   = $maxDataBits - $totalDataBits;
             }
             else {
-                if ( $total_data_bits > $max_data_bits ) {
+                if ( $totalDataBits > $maxDataBits ) {
                     throw new OverflowException('QRCode : Overflow error');
                 }
             }
         }
-        return array($data_value, $data_bits);
+        return array($dataValue, $dataBits);
     }
 
     /**
@@ -1078,14 +943,14 @@ class Builder implements Contracts\BuilderInterface
     }
 
     /**
-     * @param $data_counter
-     * @param $data_value
-     * @param $data_bits
-     * @param $max_data_codewords
+     * @param $dataValue
+     * @param $dataCounter
+     * @param $dataBits
+     * @param $maxDataCodewords
      *
      * @return mixed
      */
-    private function getCodewords($data_counter, $data_value, $data_bits, $max_data_codewords)
+    private function getCodewords($dataValue, $dataCounter, $dataBits, $maxDataCodewords)
     {
         // Divide data by 8bit
         $codewords_counter  = 0;
@@ -1093,9 +958,9 @@ class Builder implements Contracts\BuilderInterface
         $remaining_bits     = 8;
 
         $i = 0;
-        while ($i <= $data_counter) {
-            $buffer         = @$data_value[$i];
-            $buffer_bits    = @$data_bits[$i];
+        while ($i <= $dataCounter) {
+            $buffer         = @$dataValue[$i];
+            $buffer_bits    = @$dataBits[$i];
 
             $flag = 1;
             while ($flag) {
@@ -1116,7 +981,7 @@ class Builder implements Contracts\BuilderInterface
 
                     $codewords_counter++;
 
-                    if ($codewords_counter < ($max_data_codewords - 1)) {
+                    if ($codewords_counter < ($maxDataCodewords - 1)) {
                         $codewords[$codewords_counter] = 0;
                     }
 
@@ -1134,10 +999,10 @@ class Builder implements Contracts\BuilderInterface
         }
 
         // Set padding character
-        if ($codewords_counter < ($max_data_codewords - 1)) {
+        if ($codewords_counter < ($maxDataCodewords - 1)) {
             $flag = 1;
 
-            while ($codewords_counter < ($max_data_codewords - 1)) {
+            while ($codewords_counter < ($maxDataCodewords - 1)) {
                 $codewords_counter++;
 
                 $codewords[$codewords_counter] = ($flag == 1) ? 236 : 17;
@@ -1152,9 +1017,9 @@ class Builder implements Contracts\BuilderInterface
         $remaining_bits     = 8;
 
         $i = 0;
-        while ($i <= $data_counter) {
-            $buffer = @$data_value[$i];
-            $buffer_bits = @$data_bits[$i];
+        while ($i <= $dataCounter) {
+            $buffer = @$dataValue[$i];
+            $buffer_bits = @$dataBits[$i];
 
             $flag = 1;
             while ($flag) {
@@ -1175,7 +1040,7 @@ class Builder implements Contracts\BuilderInterface
 
                     $codewords_counter++;
 
-                    if ($codewords_counter < ($max_data_codewords - 1)) {
+                    if ($codewords_counter < ($maxDataCodewords - 1)) {
                         $codewords[$codewords_counter] = 0;
                     }
 
@@ -1192,10 +1057,10 @@ class Builder implements Contracts\BuilderInterface
         }
 
         // Set padding character
-        if ($codewords_counter < ($max_data_codewords - 1)) {
+        if ($codewords_counter < ($maxDataCodewords - 1)) {
             $flag = 1;
 
-            while ($codewords_counter < ($max_data_codewords - 1)) {
+            while ($codewords_counter < ($maxDataCodewords - 1)) {
                 $codewords_counter++;
 
                 $codewords[$codewords_counter] = ($flag == 1) ? 236 : 17;

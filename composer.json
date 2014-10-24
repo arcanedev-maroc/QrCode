@@ -1,14 +1,15 @@
 {
     "name": "arcanedev/qr-code",
     "description": "QR Code generator",
-    "keywords": ["qr-code", "qr", "code", "generator"],
+    "keywords": ["qrcode", "qr-code", "qr", "code", "generator"],
     "type": "library",
     "license": "MIT",
     "homepage": "https://github.com/arcanedev-maroc/QrCode",
     "authors": [
         {
             "name": "ARCANEDEV",
-            "email": "arcanedev.maroc@gmail.com"
+            "email": "arcanedev.maroc@gmail.com",
+            "homepage": "http://www.arcanedev.net/"
         }
     ],
     "require": {

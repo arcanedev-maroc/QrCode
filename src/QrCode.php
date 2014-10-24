@@ -2,7 +2,7 @@
 
 use Arcanedev\QrCode\Contracts\QrCodeInterface;
 use Arcanedev\QrCode\Contracts\BuilderInterface;
-use Arcanedev\QrCode\Exceptions\ImageFunctionUnknownException;
+use Arcanedev\QrCode\Entities\Exceptions\ImageFunctionUnknownException;
 
 // TODO: Clean & Refactor it
 class QrCode implements QrCodeInterface

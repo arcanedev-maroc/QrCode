@@ -218,8 +218,6 @@ class ImageType implements Contracts\ImageTypeInterface
     // TODO: Complete the checkType function implementation
     private function isValidType($type)
     {
-        $type = $this->convertJpgToJpeg($type);
-
         return $this->isInAvailableImageTypes($type);
     }
 
@@ -240,6 +238,8 @@ class ImageType implements Contracts\ImageTypeInterface
      */
     private function isInAvailableImageTypes($type)
     {
+        $type = $this->convertJpgToJpeg($type);
+
         return in_array($type, $this->getAllAvailable());
     }
 
@@ -264,6 +264,8 @@ class ImageType implements Contracts\ImageTypeInterface
     // TODO: Add BMP Type Support
     public function header()
     {
-        header('Content-Type: image/' . str_replace('wbmp', 'bmp', $this->get()));
+        $type = str_replace('wbmp', 'bmp', $this->get());
+
+        header('Content-Type: image/' . $type);
     }
 }

@@ -25,10 +25,10 @@ class ColorTest extends \PHPUnit_Framework_TestCase
      */
     public static function setUpBeforeClass()
     {
-        self::$blackColor   = ['r' => 0,   'g' => 0,   'b' => 0];
-        self::$whiteColor   = ['r' => 255, 'g' => 255, 'b' => 255];
-        self::$badassColor  = ['r' => 186, 'g' => 218, 'b' => 85];
-        self::$devilColor   = ['r' => 666, 'g' => 666, 'b' => 666];
+        self::$blackColor   = ['r' => 0,   'g' => 0,     'b' => 0];
+        self::$whiteColor   = ['r' => 255, 'g' => 255,   'b' => 255];
+        self::$badassColor  = ['r' => 186, 'g' => 218,   'b' => 85];
+        self::$devilColor   = ['r' => 666, 'g' => 666,   'b' => 666];
         self::$badKeysColor = ['red' => 0, 'green' => 0, 'blue' => 0];
     }
 

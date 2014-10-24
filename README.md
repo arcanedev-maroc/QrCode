@@ -6,7 +6,7 @@ This library helps you generate images containing a QR code.
 
 [![Build Status](http://img.shields.io/travis/arcanedev-maroc/QrCode.svg)](http://travis-ci.org/arcanedev-maroc/QrCode)
 [![Version](http://img.shields.io/packagist/v/arcanedev/qr-code.svg)](https://packagist.org/packages/arcanedev/qr-code)
-[![License](http://img.shields.io/packagist/l/arcanedev/qr-code.svg)](https://packagist.org/packages/arcanedev/qr-code)
+[![License](http://img.shields.io/packagist/l/arcanedev/qr-code.svg)](http://opensource.org/licenses/MIT)
 
 ### Contributing
 If you have any suggestions or improvements feel free to create an issue or create a Pull Request.
