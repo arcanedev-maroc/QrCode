@@ -130,12 +130,12 @@ class ImageTypeTest extends \PHPUnit_Framework_TestCase
     public function testImageHeader()
     {
         $this->imageType->set('png')->header();
-        $this->assertEquals(['Content-Type: image/png'], xdebug_get_headers());
+        $this->assertEquals(['Content-Type: image/png'], \xdebug_get_headers());
 
         $this->imageType->set('jpg')->header();
-        $this->assertEquals(['Content-Type: image/jpeg'], xdebug_get_headers());
+        $this->assertEquals(['Content-Type: image/jpeg'], \xdebug_get_headers());
 
         $this->imageType->set('gif')->header();
-        $this->assertEquals(['Content-Type: image/gif'], xdebug_get_headers());
+        $this->assertEquals(['Content-Type: image/gif'], \xdebug_get_headers());
     }
 }
