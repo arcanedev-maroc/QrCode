@@ -8,10 +8,10 @@ class ModesManager implements Contracts\ModesManagerInterface
      */
     protected $data;
 
-    protected $structure_append_n;
-    protected $structure_append_m;
-    protected $structure_append_parity;
-    protected $structure_append_original_data;
+    protected $structureAppendN;
+    protected $structureAppendM;
+    protected $structureAppendParity;
+    protected $structureAppendOriginalData;
 
     /** @var NumericMode | AlphanumericMode | EightBitMode */
     protected $mode;
@@ -46,10 +46,10 @@ class ModesManager implements Contracts\ModesManagerInterface
      */
     public function setStructureAppend($n, $m, $parity, $original_data)
     {
-        $this->structure_append_n               = $n;
-        $this->structure_append_m               = $m;
-        $this->structure_append_parity          = $parity;
-        $this->structure_append_original_data   = $original_data;
+        $this->structureAppendN               = $n;
+        $this->structureAppendM               = $m;
+        $this->structureAppendParity          = $parity;
+        $this->structureAppendOriginalData   = $original_data;
     }
 
     /**
@@ -83,31 +83,31 @@ class ModesManager implements Contracts\ModesManagerInterface
      */
     private function prepareDataBits()
     {
-        $n              = $this->structure_append_n;
-        $m              = $this->structure_append_m;
-        $parity         = $this->structure_append_parity;
-        $originalData   = $this->structure_append_original_data;
+        $n              = $this->structureAppendN;
+        $m              = $this->structureAppendM;
+        $parity         = $this->structureAppendParity;
+        $originalData   = $this->structureAppendOriginalData;
 
-        $data_counter   = 0;
+        $dataCounter   = 0;
 
         if ( $this->checkStructureAppend($n, $m) )
         {
-            $data_value[0]  = 3;
-            $data_bits[0]   = 4;
+            $dataValue[0]  = 3;
+            $dataBits[0]   = 4;
 
-            $data_value[1]  = $m - 1;
-            $data_bits[1]   = 4;
+            $dataValue[1]  = $m - 1;
+            $dataBits[1]   = 4;
 
-            $data_value[2]  = $n - 1;
-            $data_bits[2]   = 4;
+            $dataValue[2]  = $n - 1;
+            $dataBits[2]   = 4;
 
             $originalDataLength = strlen($originalData);
 
             if ( $originalDataLength > 1 )
             {
                 $parity = 0;
-                $i = 0;
 
+                $i      = 0;
                 while ($i < $originalDataLength)
                 {
                     $parity = ($parity ^ ord(substr($originalData, $i, 1)));
@@ -115,15 +115,15 @@ class ModesManager implements Contracts\ModesManagerInterface
                 }
             }
 
-            $data_value[3]  = $parity;
-            $data_bits[3]   = 8;
+            $dataValue[3]  = $parity;
+            $dataBits[3]   = 8;
 
-            $data_counter   = 4;
+            $dataCounter   = 4;
         }
 
-        $data_bits[$data_counter] = 4;
+        $dataBits[$dataCounter] = 4;
 
-        return $data_bits;
+        return $dataBits;
     }
 
     /**

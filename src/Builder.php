@@ -55,9 +55,16 @@ class Builder implements Contracts\BuilderInterface
     {
         $this->encodeManager        = new Modes\ModesManager;
         $this->imageType            = new ImageType;
+        $this->initColors();
+        $this->errorCorrection      = new ErrorCorrection;
+    }
+
+    public function initColors()
+    {
         $this->frontDefaultColor    = (new Color)->black();
         $this->backDefaultColor     = (new Color)->white();
-        $this->errorCorrection      = new ErrorCorrection;
+        $this->frontColor           = (new Color)->black();
+        $this->backColor            = (new Color)->white();
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -398,6 +405,11 @@ class Builder implements Contracts\BuilderInterface
     private function getDataLength()
     {
         return strlen( $this->getText() );
+    }
+
+    public function getHeaderAttributes()
+    {
+        return $this->imageType->getHeaderAttributes();
     }
 
     /* ------------------------------------------------------------------------------------------------

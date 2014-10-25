@@ -30,6 +30,11 @@ class QrCode implements QrCodeInterface
      |  Getters & Setters
      | ------------------------------------------------------------------------------------------------
      */
+    public function getBuilder()
+    {
+        return $this->builder;
+    }
+
     /**
      * Return text that will be hid in QR Code
      *
@@ -73,6 +78,8 @@ class QrCode implements QrCodeInterface
     public function setFormat($format)
     {
         $this->builder->setImageFormat($format);
+
+        return $this;
     }
 
     /**
@@ -134,11 +141,31 @@ class QrCode implements QrCodeInterface
     /**
      * Return foreground color of the QR Code
      *
-     * @return array
+     * @return Entities\Color
      */
     public function getForegroundColor()
     {
         return $this->builder->getForegroundColor();
+    }
+
+    /**
+     * Return foreground color of the QR Code
+     *
+     * @return array
+     */
+    public function getForeground()
+    {
+        return $this->getForegroundColor()->toArray();
+    }
+
+    /**
+     * Return foreground color of the QR Code
+     *
+     * @return string
+     */
+    public function getForegroundHex()
+    {
+        return $this->getForegroundColor()->getHex();
     }
 
     /**
@@ -172,11 +199,31 @@ class QrCode implements QrCodeInterface
     /**
      * Return background color of the QR Code
      *
-     * @return array
+     * @return Entities\Color
      */
     public function getBackgroundColor()
     {
         return $this->builder->getBackgroundColor();
+    }
+
+    /**
+     * Return background color of the QR Code
+     *
+     * @return Entities\Color
+     */
+    public function getBackground()
+    {
+        return $this->getBackgroundColor()->toArray();
+    }
+
+    /**
+     * Return background color of the QR Code
+     *
+     * @return Entities\Color
+     */
+    public function getBackgroundHex()
+    {
+        return $this->getBackgroundColor()->getHex();
     }
 
     /**
@@ -291,6 +338,16 @@ class QrCode implements QrCodeInterface
         return $this;
     }
 
+    public function setHeaderResponse()
+    {
+        header($this->getHeaderAttributes());
+    }
+
+    private function getHeaderAttributes()
+    {
+        return $this->builder->getHeaderAttributes();
+    }
+
     /* ------------------------------------------------------------------------------------------------
      |  Main Functions
      | ------------------------------------------------------------------------------------------------
@@ -340,9 +397,8 @@ class QrCode implements QrCodeInterface
         if ( ! is_null($format) )
             $this->setFormat($format);
 
+        $this->setHeaderResponse();
         call_user_func($this->getFunctionName(), $this->getImage());
-
-        return $this;
     }
 
     /**
@@ -390,6 +446,10 @@ class QrCode implements QrCodeInterface
         return $this->builder->getImage();
     }
 
+    /**
+     * Get the Function name
+     * @return string
+     */
     private function getFunctionName()
     {
         return $this->builder->getFunctionName();

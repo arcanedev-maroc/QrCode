@@ -41,6 +41,7 @@ class ColorTest extends \PHPUnit_Framework_TestCase
      |  Test Functions
      | ------------------------------------------------------------------------------------------------
      */
+    /** @test */
     public function testCanCreateColor()
     {
         $this->assertNotEmpty($this->color);
@@ -56,6 +57,7 @@ class ColorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(255, $this->color->getBlue());
     }
 
+    /** @test */
     public function testBasicColor()
     {
         $this->color->black();
@@ -65,6 +67,7 @@ class ColorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(self::$whiteColor, $this->color->toArray());
     }
 
+    /** @test */
     public function testCanSetColorFromArray()
     {
         $this->color->setFromArray(self::$badassColor);
@@ -73,18 +76,21 @@ class ColorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(85, $this->color->getBlue());
     }
 
+    /** @test */
     public function testCanGetColorArray()
     {
         $this->color->setFromArray(self::$badassColor);
         $this->assertEquals(self::$badassColor, $this->color->toArray());
     }
 
+    /** @test */
     public function testCanSetHexColor()
     {
         $this->color->hex('#bada55');
         $this->assertEquals(self::$badassColor, $this->color->toArray());
     }
 
+    /** @test */
     public function testCanGetHexColor()
     {
         $this->color->setFromArray(self::$badassColor);
@@ -92,6 +98,7 @@ class ColorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @test
      * @expectedException \Arcanedev\QrCode\Entities\Exceptions\InvalidHexValueException
      */
     public function testHexValueMustThrowAnException()
@@ -100,6 +107,7 @@ class ColorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @test
      * @expectedException \Arcanedev\QrCode\Entities\Exceptions\InvalidRGBValuesException
      */
     public function testRGBValuesMustThrowAnException()
@@ -108,6 +116,7 @@ class ColorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @test
      * @expectedException \Arcanedev\QrCode\Entities\Exceptions\InvalidRGBArrayException
      */
     public function testRGBArrayOneMustThrowAnException()
@@ -116,6 +125,7 @@ class ColorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @test
      * @expectedException \Arcanedev\QrCode\Entities\Exceptions\InvalidRGBArrayException
      */
     public function testRGBArrayTwoMustThrowAnException()
@@ -124,6 +134,7 @@ class ColorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @test
      * @expectedException \Arcanedev\QrCode\Entities\Exceptions\InvalidRGBValuesException
      */
     public function testRGBArrayThreeMustThrowAnException()

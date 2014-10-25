@@ -35,12 +35,14 @@ class ImageTypeTest extends \PHPUnit_Framework_TestCase
      |  Test Functions
      | ------------------------------------------------------------------------------------------------
      */
+    /** @test */
     public function testCanCreateImageType()
     {
         $this->assertEquals(self::$defaultType, $this->imageType->getDefaultType());
         $this->assertEquals(self::$allAvailableTypes, $this->imageType->getAllAvailable());
     }
 
+    /** @test */
     public function testCanSetAndGetImageType()
     {
         $this->assertEquals('gif', $this->imageType->set('gif')->get());
@@ -52,6 +54,7 @@ class ImageTypeTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('png', $this->imageType->set('png')->get());
     }
 
+    /** @test */
     public function testCanSetAngGetExtension()
     {
         $this->assertEquals('gif', $this->imageType->set('gif')->getExtension());
@@ -64,6 +67,7 @@ class ImageTypeTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @test
      * @expectedException \Arcanedev\QrCode\Entities\Exceptions\InvalidImageTypeException
      */
     public function testSetAnInvalidTypeMustThrowAnException()
@@ -92,6 +96,7 @@ class ImageTypeTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @test
      * @expectedException \Arcanedev\QrCode\Entities\Exceptions\InvalidFileExtensionException
      */
     public function testSetFilenameWithInvalidExtensionMustThrowException()
@@ -100,6 +105,7 @@ class ImageTypeTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @test
      * @expectedException \Arcanedev\QrCode\Entities\Exceptions\InvalidFileExtensionException
      */
     public function testSetFilenameWithoutExtensionMustThrowException()
@@ -116,26 +122,20 @@ class ImageTypeTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($this->imageType->isAvailable('wbmp'));
     }
 
+    /** @test */
     public function testGetFunctionNameFromType()
     {
-        $this->assertEquals('imagepng', $this->imageType->set('png')->getFunctionName());
+        $this->assertEquals('imagepng',  $this->imageType->set('png')->getFunctionName());
         $this->assertEquals('imagejpeg', $this->imageType->set('jpg')->getFunctionName());
-        $this->assertEquals('imagegif', $this->imageType->set('gif')->getFunctionName());
+        $this->assertEquals('imagegif',  $this->imageType->set('gif')->getFunctionName());
         $this->assertEquals('imagewbmp', $this->imageType->set('wbmp')->getFunctionName());
     }
 
-    /**
-     * @runInSeparateProcess
-     */
+    /** @test */
     public function testImageHeader()
     {
-        $this->imageType->set('png')->header();
-        $this->assertEquals(['Content-Type: image/png'], \xdebug_get_headers());
-
-        $this->imageType->set('jpg')->header();
-        $this->assertEquals(['Content-Type: image/jpeg'], \xdebug_get_headers());
-
-        $this->imageType->set('gif')->header();
-        $this->assertEquals(['Content-Type: image/gif'], \xdebug_get_headers());
+        $this->assertEquals('Content-Type: image/png',  $this->imageType->set('png')->getHeaderAttributes());
+        $this->assertEquals('Content-Type: image/jpeg', $this->imageType->set('jpg')->getHeaderAttributes());
+        $this->assertEquals('Content-Type: image/gif',  $this->imageType->set('gif')->getHeaderAttributes());
     }
 }

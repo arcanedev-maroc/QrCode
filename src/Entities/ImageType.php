@@ -82,7 +82,7 @@ class ImageType implements Contracts\ImageTypeInterface
             throw new InvalidImageTypeException("The image type [{$type}] is invalid.");
         }
 
-        $this->selected = $this->convertJpgToJpeg($type);
+        $this->selected = $this->convert($type);
     }
 
     /**
@@ -113,7 +113,7 @@ class ImageType implements Contracts\ImageTypeInterface
     public function getExtension()
     {
         // TODO: Complete the getExtension function implementation
-        return $this->convertJpegToJpg($this->selected);
+        return $this->convert($this->selected, true);
     }
 
     /**
@@ -153,11 +153,33 @@ class ImageType implements Contracts\ImageTypeInterface
         return $this;
     }
 
+    /**
+     * Get the function name to create the image
+     *
+     * @throws ImageFunctionUnknownException
+     *
+     * @return string
+     */
+    public function getFunctionName()
+    {
+        $functionName = 'image' . $this->get();
+
+        if ( ! function_exists($functionName) ) {
+            throw new ImageFunctionUnknownException('QRCode: function ' . $functionName . ' does not exists.');
+        }
+
+        return $functionName;
+    }
+
+    public function getHeaderAttributes()
+    {
+        return 'Content-Type: image/' . $this->convert($this->get());
+    }
+
     /* ------------------------------------------------------------------------------------------------
      |  Functions
      | ------------------------------------------------------------------------------------------------
      */
-
     /**
      * Extract extension from the filename
      *
@@ -176,24 +198,29 @@ class ImageType implements Contracts\ImageTypeInterface
      |  Conversion Function
      | ------------------------------------------------------------------------------------------------
      */
-    /**
-     * @param string $type
-     *
-     * @return mixed
-     */
-    private function convertJpgToJpeg($type)
+    private function convert($type, $reverse = false)
     {
-        return str_replace('jpg', 'jpeg', $type);
+        $replace = array_merge(
+            $this->getJpgReplace(),
+            $this->getBmpReplace()
+        );
+
+        if ( $reverse ) {
+            $replace = array_flip($replace);
+        }
+
+        return str_replace(array_keys($replace), array_values($replace), $type);
     }
 
-    /**
-     * @param string $type
-     *
-     * @return mixed
-     */
-    private function convertJpegToJpg($type)
+    private function getJpgReplace()
     {
-        return str_replace('jpeg', 'jpg', $type);
+        return ['jpg' => 'jpeg'];
+    }
+
+    private function getBmpReplace()
+    {
+        // TODO: Verify the correct WBMP Format replacement
+        return ['wbmp' => 'wbmp'];
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -238,34 +265,6 @@ class ImageType implements Contracts\ImageTypeInterface
      */
     private function isInAvailableImageTypes($type)
     {
-        $type = $this->convertJpgToJpeg($type);
-
-        return in_array($type, $this->getAllAvailable());
-    }
-
-    /**
-     * Get the function name to create the image
-     *
-     * @throws ImageFunctionUnknownException
-     *
-     * @return string
-     */
-    public function getFunctionName()
-    {
-        $functionName = 'image' . $this->get();
-
-        if ( ! function_exists($functionName) ) {
-            throw new ImageFunctionUnknownException('QRCode: function ' . $functionName . ' does not exists.');
-        }
-
-        return $functionName;
-    }
-
-    // TODO: Add BMP Type Support
-    public function header()
-    {
-        $type = str_replace('wbmp', 'bmp', $this->get());
-
-        header('Content-Type: image/' . $type);
+        return in_array($this->convert($type), $this->getAllAvailable());
     }
 }

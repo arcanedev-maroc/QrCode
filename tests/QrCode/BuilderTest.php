@@ -25,6 +25,7 @@ class BuilderTest extends \PHPUnit_Framework_TestCase
      |  Test Functions
      | ------------------------------------------------------------------------------------------------
      */
+    /** @test */
     public function testCanCreateBuilder()
     {
         $this->assertTrue(true);
