@@ -442,14 +442,11 @@ class Builder implements Contracts\BuilderInterface
         $matX           = fread($fp1, $this->getByteNumber());
         $matY           = fread($fp1, $this->getByteNumber());
         $masks          = fread($fp1, $this->getByteNumber());
-        $fi_x           = fread($fp1, 15);
-        $fi_y           = fread($fp1, 15);
+        $fiX            = fread($fp1, 15);
+        $fiY            = fread($fp1, 15);
         $rsEccCodewords = ord(fread($fp1, 1));
         $rso            = fread($fp1, 128);
         fclose($fp1);
-
-
-        $rsCalTableArray    = $this->getRSCalTableArray($rsEccCodewords);
 
         // Set terminator
         list($dataValue, $dataBits) = $this->setTerminator($dataValue, $dataCounter, $dataBits, $totalDataBits, $maxDataBits);
@@ -459,12 +456,12 @@ class Builder implements Contracts\BuilderInterface
         $codewords          = $this->getCodewords($dataValue, $dataCounter, $dataBits, $maxDataCodewords);
 
         // RS-ECC prepare
-        $codewords          = $this->prepareRsEcc($maxDataCodewords, $codewords, $rso, $rsEccCodewords, $rsCalTableArray);
+        $codewords          = $this->prepareRsEcc($maxDataCodewords, $codewords, $rso, $rsEccCodewords);
 
         $matrixContent      = $this->getMatrixContent($codewords, $masks, $matX, $matY);
 
         // Format information
-        $matrixContent      = $this->formatInformation($matrixContent, $fi_x, $fi_y);
+        $matrixContent      = $this->formatInformation($matrixContent, $fiX, $fiY);
 
         $this->createImage($matrixContent);
 
@@ -483,18 +480,17 @@ class Builder implements Contracts\BuilderInterface
         return $this->getOneMatrixRemainBit() + ($this->getMaxCodewords() << 3);
     }
 
-    private function getDataBitsTotal($data_bits, $data_counter)
+    private function getDataBitsTotal($dataBits, $dataCounter)
     {
-        $i                  = 0;
-        $total_data_bits    = 0;
+        $i              = 0;
+        $totalDataBits  = 0;
 
-        while ($i < $data_counter)
-        {
-            $total_data_bits += $data_bits[$i];
+        while ($i < $dataCounter) {
+            $totalDataBits += $dataBits[$i];
             $i++;
         }
 
-        return $total_data_bits;
+        return $totalDataBits;
     }
 
     private function getMaxDataBits($codewordNumPlus, $dataBitsTotal)
@@ -719,25 +715,25 @@ class Builder implements Contracts\BuilderInterface
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * @param $rs_ecc_codewords
+     * @param $rsEccCodewords
      *
      * @return array
      */
-    private function getRSCalTableArray($rs_ecc_codewords)
+    private function getRSCalTableArray($rsEccCodewords)
     {
-        $rs_cal_table_array = [];
+        $rsCalTableArray = [];
 
-        $fp0    = fopen($this->getRSCDatFilePath($rs_ecc_codewords), "rb");
+        $fp0    = fopen($this->getRSCDatFilePath($rsEccCodewords), "rb");
 
         $i      = 0;
         while ($i < 256) {
-            $rs_cal_table_array[$i] = fread($fp0, $rs_ecc_codewords);
+            $rsCalTableArray[$i] = fread($fp0, $rsEccCodewords);
             $i++;
         }
 
         fclose($fp0);
 
-        return $rs_cal_table_array;
+        return $rsCalTableArray;
     }
 
     /**
@@ -869,66 +865,67 @@ class Builder implements Contracts\BuilderInterface
     }
 
     /**
-     * @param $max_data_codewords
+     * @param $maxDataCodewords
      * @param $codewords
      * @param $rso
-     * @param $rs_ecc_codewords
-     * @param $rs_cal_table_array
+     * @param $rsEccCodewords
      *
      * @return array
      */
-    private function prepareRsEcc($max_data_codewords, $codewords, $rso, $rs_ecc_codewords, $rs_cal_table_array)
+    private function prepareRsEcc($maxDataCodewords, $codewords, $rso, $rsEccCodewords)
     {
-        $rs_block_order     = unpack("C*", $rso);
+        $rsCalTableArray    = $this->getRSCalTableArray($rsEccCodewords);
+
+        $rsBlockOrder       = unpack("C*", $rso);
 
         $i                  = 0;
         $j                  = 0;
-        $rs_block_number    = 0;
-        $rs_temp[0]         = "";
+        $rsBlockNumber      = 0;
+        $rsTempOne[0]       = "";
 
-        while ($i < $max_data_codewords) {
-            $rs_temp[$rs_block_number] .= chr($codewords[$i]);
+        while ($i < $maxDataCodewords) {
+            $rsTempOne[$rsBlockNumber] .= chr($codewords[$i]);
             $j++;
 
-            if ($j >= ($rs_block_order[$rs_block_number + 1] - $rs_ecc_codewords)) {
+            if ($j >= ($rsBlockOrder[$rsBlockNumber + 1] - $rsEccCodewords)) {
                 $j = 0;
-                $rs_block_number++;
-                $rs_temp[$rs_block_number] = "";
+                $rsBlockNumber++;
+                $rsTempOne[$rsBlockNumber] = "";
             }
 
             $i++;
         }
 
         // RS-ECC main
-        $rs_block_number    = 0;
-        $rs_block_order_num = count($rs_block_order);
+        $rsBlockNumber      = 0;
+        $rsBlockOrderNum    = count($rsBlockOrder);
 
-        while ($rs_block_number < $rs_block_order_num) {
-            $rs_codewords       = $rs_block_order[$rs_block_number + 1];
-            $rs_data_codewords  = $rs_codewords - $rs_ecc_codewords;
+        while ($rsBlockNumber < $rsBlockOrderNum) {
+            $rsCodewords        = $rsBlockOrder[$rsBlockNumber + 1];
+            $rsCodewordsData    = $rsCodewords - $rsEccCodewords;
 
-            $rstemp             = $rs_temp[$rs_block_number] . str_repeat(chr(0), $rs_ecc_codewords);
-            $padding_data       = str_repeat(chr(0), $rs_data_codewords);
+            $rsTempTwo          = $rsTempOne[$rsBlockNumber] . str_repeat(chr(0), $rsEccCodewords);
+            $paddingData        = str_repeat(chr(0), $rsCodewordsData);
 
-            $j = $rs_data_codewords;
+            $j = $rsCodewordsData;
             while ($j > 0) {
-                $first = ord(substr($rstemp, 0, 1));
+                $first = ord(substr($rsTempTwo, 0, 1));
 
                 if ($first) {
-                    $left_chr   = substr($rstemp, 1);
-                    $cal        = $rs_cal_table_array[$first] . $padding_data;
-                    $rstemp     = $left_chr ^ $cal;
+                    $leftChr    = substr($rsTempTwo, 1);
+                    $cal        = $rsCalTableArray[$first] . $paddingData;
+                    $rsTempTwo  = $leftChr ^ $cal;
                 }
                 else {
-                    $rstemp     = substr($rstemp, 1);
+                    $rsTempTwo  = substr($rsTempTwo, 1);
                 }
 
                 $j--;
             }
 
-            $codewords = array_merge($codewords, unpack("C*", $rstemp));
+            $codewords = array_merge($codewords, unpack("C*", $rsTempTwo));
 
-            $rs_block_number++;
+            $rsBlockNumber++;
         }
 
         return $codewords;
@@ -953,120 +950,124 @@ class Builder implements Contracts\BuilderInterface
     private function getCodewords($dataValue, $dataCounter, $dataBits, $maxDataCodewords)
     {
         // Divide data by 8bit
-        $codewords_counter  = 0;
+        $codewordsCounter   = 0;
         $codewords[0]       = 0;
-        $remaining_bits     = 8;
+        $remainingBits      = 8;
 
         $i = 0;
         while ($i <= $dataCounter) {
             $buffer         = @$dataValue[$i];
-            $buffer_bits    = @$dataBits[$i];
+            $bufferBits     = @$dataBits[$i];
 
             $flag = 1;
             while ($flag) {
-                if ($remaining_bits > $buffer_bits) {
-                    $codewords[$codewords_counter] = ((@$codewords[$codewords_counter] << $buffer_bits) | $buffer);
-                    $remaining_bits -= $buffer_bits;
+                if ($remainingBits > $bufferBits) {
+                    $codewords[$codewordsCounter] = ((@$codewords[$codewordsCounter] << $bufferBits) | $buffer);
+                    $remainingBits -= $bufferBits;
                     $flag = 0;
                 } else {
-                    $buffer_bits -= $remaining_bits;
-                    $codewords[$codewords_counter] = (($codewords[$codewords_counter] << $remaining_bits) | ($buffer >> $buffer_bits));
+                    $bufferBits -= $remainingBits;
+                    $codewords[$codewordsCounter] = (($codewords[$codewordsCounter] << $remainingBits) | ($buffer >> $bufferBits));
 
-                    if ($buffer_bits == 0) {
+                    if ($bufferBits == 0) {
                         $flag = 0;
                     } else {
-                        $buffer = ($buffer & ((1 << $buffer_bits) - 1));
+                        $buffer = ($buffer & ((1 << $bufferBits) - 1));
                         $flag = 1;
                     }
 
-                    $codewords_counter++;
+                    $codewordsCounter++;
 
-                    if ($codewords_counter < ($maxDataCodewords - 1)) {
-                        $codewords[$codewords_counter] = 0;
+                    if ($codewordsCounter < ($maxDataCodewords - 1)) {
+                        $codewords[$codewordsCounter] = 0;
                     }
 
-                    $remaining_bits = 8;
+                    $remainingBits = 8;
                 }
             }
             $i++;
         }
 
         // $codewords, $codewords_counter
-        if ($remaining_bits != 8) {
-            $codewords[$codewords_counter] = $codewords[$codewords_counter] << $remaining_bits;
-        } else {
-            $codewords_counter--;
+        if ( $remainingBits != 8 ) {
+            $codewords[$codewordsCounter] = $codewords[$codewordsCounter] << $remainingBits;
+        }
+        else {
+            $codewordsCounter--;
         }
 
         // Set padding character
-        if ($codewords_counter < ($maxDataCodewords - 1)) {
+        if ($codewordsCounter < ($maxDataCodewords - 1)) {
             $flag = 1;
 
-            while ($codewords_counter < ($maxDataCodewords - 1)) {
-                $codewords_counter++;
+            while ($codewordsCounter < ($maxDataCodewords - 1)) {
+                $codewordsCounter++;
 
-                $codewords[$codewords_counter] = ($flag == 1) ? 236 : 17;
+                $codewords[$codewordsCounter] = ($flag == 1) ? 236 : 17;
 
                 $flag = $flag * (-1);
             }
         }
 
         // Divide data by 8bit
-        $codewords_counter  = 0;
+        $codewordsCounter   = 0;
         $codewords[0]       = 0;
-        $remaining_bits     = 8;
+        $remainingBits      = 8;
 
         $i = 0;
         while ($i <= $dataCounter) {
-            $buffer = @$dataValue[$i];
-            $buffer_bits = @$dataBits[$i];
+            $buffer     = @$dataValue[$i];
+            $bufferBits = @$dataBits[$i];
 
             $flag = 1;
             while ($flag) {
-                if ($remaining_bits > $buffer_bits) {
-                    $codewords[$codewords_counter] = ((@$codewords[$codewords_counter] << $buffer_bits) | $buffer);
-                    $remaining_bits -= $buffer_bits;
+                if ($remainingBits > $bufferBits) {
+                    $codewords[$codewordsCounter] = ((@$codewords[$codewordsCounter] << $bufferBits) | $buffer);
+                    $remainingBits -= $bufferBits;
                     $flag = 0;
-                } else {
-                    $buffer_bits -= $remaining_bits;
-                    $codewords[$codewords_counter] = (($codewords[$codewords_counter] << $remaining_bits) | ($buffer >> $buffer_bits));
+                }
+                else {
+                    $bufferBits -= $remainingBits;
+                    $codewords[$codewordsCounter] = (($codewords[$codewordsCounter] << $remainingBits) | ($buffer >> $bufferBits));
 
-                    if ($buffer_bits == 0) {
+                    if ($bufferBits == 0) {
                         $flag = 0;
                     } else {
-                        $buffer = ($buffer & ((1 << $buffer_bits) - 1));
+                        $buffer = ($buffer & ((1 << $bufferBits) - 1));
                         $flag = 1;
                     }
 
-                    $codewords_counter++;
+                    $codewordsCounter++;
 
-                    if ($codewords_counter < ($maxDataCodewords - 1)) {
-                        $codewords[$codewords_counter] = 0;
+                    if ($codewordsCounter < ($maxDataCodewords - 1)) {
+                        $codewords[$codewordsCounter] = 0;
                     }
 
-                    $remaining_bits = 8;
+                    $remainingBits = 8;
                 }
             }
             $i++;
         }
 
-        if ($remaining_bits != 8) {
-            $codewords[$codewords_counter] = $codewords[$codewords_counter] << $remaining_bits;
-        } else {
-            $codewords_counter--;
+        if ($remainingBits != 8) {
+            $codewords[$codewordsCounter] = $codewords[$codewordsCounter] << $remainingBits;
+        }
+        else {
+            $codewordsCounter--;
         }
 
         // Set padding character
-        if ($codewords_counter < ($maxDataCodewords - 1)) {
+        if ($codewordsCounter < ($maxDataCodewords - 1)) {
             $flag = 1;
 
-            while ($codewords_counter < ($maxDataCodewords - 1)) {
-                $codewords_counter++;
+            while ($codewordsCounter < ($maxDataCodewords - 1)) {
+                $codewordsCounter++;
 
-                $codewords[$codewords_counter] = ($flag == 1) ? 236 : 17;
+                $codewords[$codewordsCounter] = ($flag == 1) ? 236 : 17;
 
                 $flag = $flag * (-1);
             }
+
             return $codewords;
         }
 
@@ -1074,14 +1075,14 @@ class Builder implements Contracts\BuilderInterface
     }
 
     /**
-     * @param $matrix_content
+     * @param $matrixContent
      *
      * @throws ImageSizeTooLargeException
      */
-    private function createImage($matrix_content)
+    private function createImage($matrixContent)
     {
-        $mask_number    = $this->getMaskNumber($matrix_content);
-        $mask_content   = 1 << $mask_number;
+        $maskNumber     = $this->getMaskNumber($matrixContent);
+        $maskContent    = 1 << $maskNumber;
 
         $mib = $this->getMaxModulesOneSide() + 8;
 
@@ -1096,24 +1097,23 @@ class Builder implements Contracts\BuilderInterface
         $this->image    = imagecreate($this->size + $this->padding * 2, $this->size + $this->padding * 2);
         imagecolorallocate($this->image, 255, 255, 255);
 
-        $base_image     = imagecreatefrompng($this->getImagePath() . "/qrv" . $this->getVersion() . ".png");
+        $baseImage      = imagecreatefrompng($this->getImagePath() . "/qrv" . $this->getVersion() . ".png");
 
         // Foreground Color
-        $col[1]         = imagecolorallocate($base_image, $this->frontDefaultColor->getRed(), $this->frontDefaultColor->getGreen(), $this->frontDefaultColor->getBlue());
+        $col[1]         = imagecolorallocate($baseImage, $this->frontDefaultColor->getRed(), $this->frontDefaultColor->getGreen(), $this->frontDefaultColor->getBlue());
         // Background Color
-        $col[0]         = imagecolorallocate($base_image, $this->backDefaultColor->getRed(), $this->backDefaultColor->getGreen(), $this->backDefaultColor->getBlue());
+        $col[0]         = imagecolorallocate($baseImage, $this->backDefaultColor->getRed(), $this->backDefaultColor->getGreen(), $this->backDefaultColor->getBlue());
 
         $mxe    = 4 + $this->getMaxModulesOneSide();
         $i      = 4;
         $ii     = 0;
 
         while ($i < $mxe) {
-            $j  = 4;
-            $jj = 0;
+            $j  = 4; $jj = 0;
 
             while ($j < $mxe) {
-                if ($matrix_content[$ii][$jj] & $mask_content) {
-                    imagesetpixel($base_image, $i, $j, $col[1]);
+                if ($matrixContent[$ii][$jj] & $maskContent) {
+                    imagesetpixel($baseImage, $i, $j, $col[1]);
                 }
 
                 $j++; $jj++;
@@ -1122,7 +1122,7 @@ class Builder implements Contracts\BuilderInterface
             $i++; $ii++;
         }
 
-        imagecopyresampled($this->image, $base_image, $this->padding, $this->padding, 4, 4, $this->size, $this->size, $mib - 8, $mib - 8);
+        imagecopyresampled($this->image, $baseImage, $this->padding, $this->padding, 4, 4, $this->size, $this->size, $mib - 8, $mib - 8);
 
         if ( ! is_null($this->backColor) ) {
             $this->colorifyImage($this->backDefaultColor, $this->backColor);
